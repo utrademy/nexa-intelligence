@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, CircleCheck, Clock3, Copy, Database, Info, Loader2, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
+import { AlertCircle, BookOpen, Check, CircleCheck, Clock3, Copy, Database, Info, Loader2, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useState } from "react";
 import { LogoMark } from "@/components/brand/Logo";
 import { Avatar } from "@/components/ui/Avatar";
@@ -9,6 +9,7 @@ import { DISCLAIMER } from "@/lib/mock/labor-ai";
 import type { ChatMessage as ChatMessageType } from "@/lib/types";
 import { cn } from "@/lib/format";
 import { AnswerContent } from "./AnswerContent";
+import { SourceCitationCard } from "./SourceCitationCard";
 
 export function UserMessage({ message }: { message: ChatMessageType }) {
   return (
@@ -60,13 +61,26 @@ export function AssistantMessage({ message, onRetry }: { message: ChatMessageTyp
                     Datos organizacionales analizados · Muestra POC: {message.sampleSize || 600} perfiles
                   </span>
                 )}
+                {message.sources && message.sources.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200/80 bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-800 shadow-xs">
+                    <BookOpen className="h-3 w-3 text-violet-600" />
+                    Conocimiento Sergio Flórez &amp; Abogados · {message.sources.length} fuente{message.sources.length === 1 ? "" : "s"}
+                  </span>
+                )}
               </div>
             )}
             {!failed && (
-              <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                <Clock3 className="h-3 w-3" />
-                Base documental especializada: próxima integración
-              </span>
+              message.sources && message.sources.length > 0 ? (
+                <span className="flex items-center gap-1.5 text-[11px] font-medium text-violet-700">
+                  <BookOpen className="h-3 w-3 text-violet-600" />
+                  RAG activo · Sergio Flórez &amp; Abogados
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                  <BookOpen className="h-3 w-3 text-slate-300" />
+                  Motor RAG · Sergio Flórez &amp; Abogados
+                </span>
+              )
             )}
           </div>
 
@@ -91,7 +105,26 @@ export function AssistantMessage({ message, onRetry }: { message: ChatMessageTyp
                 )}
               </div>
             ) : (
-              <AnswerContent markdown={message.content} />
+              <div>
+                <AnswerContent markdown={message.content} />
+                {message.sources && message.sources.length > 0 && (
+                  <div className="mt-6 border-t border-slate-100 pt-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-[12px] font-semibold uppercase tracking-wider text-slate-500">
+                        FUENTES CONSULTADAS · SERGIO FLÓREZ &amp; ABOGADOS
+                      </span>
+                      <span className="text-[11.5px] font-medium text-violet-600">
+                        Recuperación semántica RAG
+                      </span>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {message.sources.map((source, idx) => (
+                        <SourceCitationCard key={source.id || idx} source={source} index={idx} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

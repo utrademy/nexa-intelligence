@@ -12,7 +12,12 @@ import {
   getOrganizationIntelligenceSnapshot,
 } from "@/lib/data-intelligence/organization-snapshot";
 import { shouldFetchOrganizationalData } from "@/lib/data-intelligence/routing";
-import type { LaborAiResponse, LaborAiTurn } from "@/lib/types";
+import {
+  formatChunksAsCitations,
+  searchKnowledgeChunks,
+  shouldPerformKnowledgeRetrieval,
+} from "@/lib/knowledge/retrieval";
+import type { LaborAiResponse, LaborAiTurn, SourceCitation } from "@/lib/types";
 
 function fail(status: number, message = LABOR_AI_ERROR_MESSAGE) {
   return Response.json({ error: message } satisfies LaborAiResponse, { status });
@@ -58,8 +63,9 @@ export async function POST(request: Request) {
   let instructions = LABOR_AI_INSTRUCTIONS;
   let dataUsed = false;
   let sampleSize: number | undefined;
+  let sources: SourceCitation[] | undefined;
 
-  // Determine if question requires real database intelligence
+  // 1. Determine if question requires real database intelligence
   const requiresOrgData = parsed.includeOrgContext && shouldFetchOrganizationalData(parsed.question);
 
   if (requiresOrgData) {
@@ -70,12 +76,44 @@ export async function POST(request: Request) {
       return fail(503, LABOR_AI_DATA_ERROR_MESSAGE);
     }
     const dataBlock = formatSnapshotForPrompt(snapshot);
-    instructions = `${LABOR_AI_INSTRUCTIONS}\n\n${dataBlock}`;
+    instructions = `${instructions}\n\n${dataBlock}`;
     dataUsed = true;
     sampleSize = snapshot.dataset.sampleSize;
     console.log(`[labor-ai] Organizational data injected. Real sample size: ${sampleSize}`);
   } else if (parsed.includeOrgContext) {
-    instructions = `${LABOR_AI_INSTRUCTIONS}\n\n${DEMO_ORG_CONTEXT}`;
+    instructions = `${instructions}\n\n${DEMO_ORG_CONTEXT}`;
+  }
+
+  // 2. Determine if question requires or benefits from specialized document knowledge (RAG)
+  const shouldRetrieveDocs = shouldPerformKnowledgeRetrieval(parsed.question);
+
+  if (shouldRetrieveDocs) {
+    console.log("[labor-ai] Checking Knowledge Center for semantically relevant chunks...");
+    const retrievedChunks = await searchKnowledgeChunks(parsed.question, {
+      matchThreshold: 0.35,
+      matchCount: 4,
+    });
+
+    if (retrievedChunks.length > 0) {
+      console.log(`[labor-ai] RAG: Found ${retrievedChunks.length} relevant chunks`);
+      const citations = formatChunksAsCitations(retrievedChunks);
+      sources = citations;
+
+      const docBlock =
+        "DOCUMENT GROUNDING CONTEXT (RAG - SERGIO FLÓREZ & ABOGADOS):\n" +
+        retrievedChunks
+          .map(
+            (c, i) =>
+              `[DOCUMENTO ${i + 1}] "${c.documentTitle}" (${c.sourceName || "Sergio Flórez & Abogados"}${
+                c.pageNumber ? ` · Página ${c.pageNumber}` : ""
+              })\n${c.content}`
+          )
+          .join("\n\n");
+
+      instructions = `${instructions}\n\n${docBlock}`;
+    } else {
+      console.log("[labor-ai] RAG: No indexed chunks matched the threshold");
+    }
   }
 
   try {
@@ -99,6 +137,7 @@ export async function POST(request: Request) {
       answer,
       dataUsed,
       sampleSize,
+      sources,
     } satisfies LaborAiResponse);
   } catch (error) {
     if (error instanceof OpenAI.APIError) {

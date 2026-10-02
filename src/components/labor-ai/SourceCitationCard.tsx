@@ -3,12 +3,13 @@ import { AREA_LABEL } from "@/lib/mock/knowledge";
 import type { SourceCitation } from "@/lib/types";
 import { cn } from "@/lib/format";
 
-const AREA_TONE: Record<SourceCitation["area"], string> = {
+const AREA_TONE: Record<string, string> = {
   "labor-law": "text-indigo-700 bg-indigo-50",
   "social-security": "text-cyan-700 bg-cyan-50",
   osh: "text-amber-700 bg-amber-50",
   "sergio-flores": "text-violet-700 bg-violet-50",
   population: "text-emerald-700 bg-emerald-50",
+  other: "text-slate-700 bg-slate-50",
 };
 
 export function SourceCitationCard({ source, index }: { source: SourceCitation; index: number }) {

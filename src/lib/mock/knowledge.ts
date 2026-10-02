@@ -43,6 +43,7 @@ export const AREA_LABEL: Record<KnowledgeAreaId | "population", string> = {
   osh: "Seguridad y Salud en el Trabajo",
   "sergio-flores": `Conocimiento ${ENDORSEMENT}`,
   population: "Datos de la organización",
+  other: "Otras fuentes normativas",
 };
 
 export const KNOWLEDGE_DOCUMENTS: KnowledgeDocument[] = [

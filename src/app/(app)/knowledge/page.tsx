@@ -5,6 +5,6 @@ import { getKnowledgeData } from "@/lib/data";
 export const metadata: Metadata = { title: "Centro de Conocimiento" };
 
 export default async function KnowledgePage() {
-  const { areas, documents } = await getKnowledgeData();
-  return <KnowledgeCenter areas={areas} documents={documents} />;
+  const { areas, documents, realIndexedCount } = await getKnowledgeData();
+  return <KnowledgeCenter areas={areas} documents={documents} realIndexedCount={realIndexedCount} />;
 }

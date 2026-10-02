@@ -4,6 +4,7 @@ import * as knowledge from "./mock/knowledge";
 import { FILTER_OPTIONS, PEOPLE, TOTAL_POPULATION } from "./mock/people";
 import { buildProfile } from "./mock/profiles";
 import { fetchCampaignsFromDb, fetchPeopleFromDb, fetchPersonProfileFromDb } from "./supabase/data-service";
+import { getRealIndexedCount, getRealKnowledgeDocuments } from "./knowledge/db";
 
 // Data access layer.
 // Connects to Supabase PostgreSQL with seamless fallback to mock data
@@ -99,5 +100,14 @@ export async function getCampaignData() {
 }
 
 export async function getKnowledgeData() {
-  return { areas: knowledge.KNOWLEDGE_AREAS, documents: knowledge.KNOWLEDGE_DOCUMENTS };
+  const [realDocs, realCount] = await Promise.all([
+    getRealKnowledgeDocuments(),
+    getRealIndexedCount(),
+  ]);
+
+  return {
+    areas: knowledge.KNOWLEDGE_AREAS,
+    documents: [...realDocs, ...knowledge.KNOWLEDGE_DOCUMENTS],
+    realIndexedCount: realCount,
+  };
 }

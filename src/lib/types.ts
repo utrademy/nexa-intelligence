@@ -170,7 +170,7 @@ export interface CampaignInteraction {
   sentiment: "Positivo" | "Neutral" | "Negativo";
 }
 
-export type KnowledgeAreaId = "labor-law" | "social-security" | "osh" | "sergio-flores";
+export type KnowledgeAreaId = "labor-law" | "social-security" | "osh" | "sergio-flores" | "other";
 
 export interface KnowledgeArea {
   id: KnowledgeAreaId;
@@ -181,7 +181,7 @@ export interface KnowledgeArea {
   coverage: number;
 }
 
-export type DocumentAiStatus = "Indexado" | "Procesando" | "Requiere revisión";
+export type DocumentAiStatus = "Indexado" | "Procesando" | "Requiere revisión" | "Error";
 
 export interface KnowledgeDocument {
   id: string;
@@ -192,6 +192,10 @@ export interface KnowledgeDocument {
   pages: number;
   lastUpdated: string;
   status: DocumentAiStatus;
+  description?: string;
+  chunkCount?: number;
+  fileSize?: number;
+  isReal?: boolean;
 }
 
 export interface SourceCitation {
@@ -201,6 +205,8 @@ export interface SourceCitation {
   excerpt: string;
   reference: string;
   relevance: number;
+  page?: number;
+  documentId?: string;
 }
 
 export interface ChatMessage {
@@ -211,6 +217,7 @@ export interface ChatMessage {
   createdAt: string;
   dataUsed?: boolean;
   sampleSize?: number;
+  sources?: SourceCitation[];
 }
 
 export interface LaborAiTurn {
@@ -229,6 +236,8 @@ export type LaborAiResponse =
       answer: string;
       dataUsed?: boolean;
       sampleSize?: number;
+      sources?: SourceCitation[];
     }
   | { error: string };
+
 

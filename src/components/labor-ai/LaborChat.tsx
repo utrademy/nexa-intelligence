@@ -9,6 +9,7 @@ import {
   Clock3,
   Database,
   FileSearch,
+  FileText,
   Gavel,
   HardHat,
   Paperclip,
@@ -24,7 +25,7 @@ import { LogoMark } from "@/components/brand/Logo";
 import { Card } from "@/components/ui/Card";
 import { DISCLAIMER, SUGGESTED_QUESTIONS } from "@/lib/mock/labor-ai";
 import { ENDORSEMENT } from "@/lib/mock/knowledge";
-import type { ChatMessage, KnowledgeArea, LaborAiResponse, LaborAiTurn } from "@/lib/types";
+import type { ChatMessage, KnowledgeArea, KnowledgeAreaId, LaborAiResponse, LaborAiTurn } from "@/lib/types";
 import { cn } from "@/lib/format";
 import { AssistantMessage, UserMessage } from "./ChatMessage";
 
@@ -50,11 +51,17 @@ async function requestAnswer(question: string, history: LaborAiTurn[], includeOr
   });
   const data = (await res.json().catch(() => null)) as LaborAiResponse | null;
   if (!res.ok || !data || !("answer" in data) || !data.answer) throw new Error("labor-ai request failed");
-  return { answer: data.answer, dataUsed: data.dataUsed, sampleSize: data.sampleSize };
+  return { answer: data.answer, dataUsed: data.dataUsed, sampleSize: data.sampleSize, sources: data.sources };
 }
 
 const SUGGESTION_ICONS = [Gavel, Users, FileSearch, ClipboardList];
-const AREA_ICONS = { "labor-law": Scale, "social-security": ShieldCheck, osh: HardHat, "sergio-flores": BookOpen };
+const AREA_ICONS: Record<KnowledgeAreaId, typeof Scale> = {
+  "labor-law": Scale,
+  "social-security": ShieldCheck,
+  osh: HardHat,
+  "sergio-flores": BookOpen,
+  other: FileText,
+};
 
 function KnowledgeEquation() {
   return (
@@ -111,13 +118,14 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
 
     const controller = new AbortController();
     requestRef.current = controller;
-    let update: Pick<ChatMessage, "content" | "status" | "dataUsed" | "sampleSize">;
+    let update: Pick<ChatMessage, "content" | "status" | "dataUsed" | "sampleSize" | "sources">;
     try {
       const res = await requestAnswer(q, toHistory(base), useOrgData, controller.signal);
       update = {
         content: res.answer,
         dataUsed: res.dataUsed,
         sampleSize: res.sampleSize,
+        sources: res.sources,
         status: "done",
       };
     } catch {

@@ -1,30 +1,34 @@
 "use client";
 
-import { Check, CloudUpload, FileText, Loader2, X } from "lucide-react";
+import { AlertCircle, Check, CloudUpload, FileText, Loader2, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import type { KnowledgeArea, KnowledgeAreaId, KnowledgeDocument } from "@/lib/types";
 import { cn } from "@/lib/format";
 
-interface PendingFile {
+interface SelectedFile {
+  file: File;
   name: string;
   size: string;
-  format: "PDF" | "DOCX";
+  format: "PDF";
 }
 
-const SAMPLE_FILES: PendingFile[] = [
-  { name: "Circular 0021 de 2026 — Ministerio del Trabajo.pdf", size: "1,8 MB", format: "PDF" },
-  { name: "Procedimiento interno de ajustes razonables v2.docx", size: "420 KB", format: "DOCX" },
-];
+const PIPELINE = ["Subiendo", "Extrayendo texto", "Fragmentando e indexando", "Indexado"];
 
-const PIPELINE = ["Cargando", "Extrayendo texto", "Fragmentando e indexando", "Indexado"];
-
-function toPending(file: File): PendingFile | null {
+function toSelected(file: File): SelectedFile | null {
   const ext = file.name.split(".").pop()?.toLowerCase();
-  if (ext !== "pdf" && ext !== "docx") return null;
+  if (ext !== "pdf") return null;
   const kb = file.size / 1024;
-  return { name: file.name, size: kb > 1024 ? `${(kb / 1024).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(kb))} KB`, format: ext === "pdf" ? "PDF" : "DOCX" };
+  return {
+    file,
+    name: file.name,
+    size:
+      kb > 1024
+        ? `${(kb / 1024).toFixed(1).replace(".", ",")} MB`
+        : `${Math.max(1, Math.round(kb))} KB`,
+    format: "PDF",
+  };
 }
 
 export function UploadModal({
@@ -38,21 +42,36 @@ export function UploadModal({
   areas: KnowledgeArea[];
   onUploaded: (docs: KnowledgeDocument[]) => void;
 }) {
-  const [files, setFiles] = useState<PendingFile[]>([]);
+  const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [area, setArea] = useState<KnowledgeAreaId>("labor-law");
   const [dragging, setDragging] = useState(false);
   const [phase, setPhase] = useState(-1);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const addFiles = (list: FileList | null) => {
-    if (!list) return;
-    const accepted = Array.from(list).map(toPending).filter((f): f is PendingFile => !!f);
-    setFiles((prev) => [...prev, ...accepted]);
+  const handleFileSelect = (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    const file = list[0];
+    const item = toSelected(file);
+    if (!item) {
+      setError("Solo se admiten documentos en formato PDF en esta fase.");
+      return;
+    }
+    setError(null);
+    setSelectedFile(item);
+    if (!title) {
+      setTitle(item.name.replace(/\.pdf$/i, ""));
+    }
   };
 
   const reset = () => {
-    setFiles([]);
+    setSelectedFile(null);
+    setTitle("");
+    setDescription("");
     setPhase(-1);
+    setError(null);
   };
 
   const close = () => {
@@ -60,25 +79,48 @@ export function UploadModal({
     setTimeout(reset, 200);
   };
 
-  const start = () => {
-    setPhase(0);
-    PIPELINE.forEach((_, i) => {
-      if (i > 0) setTimeout(() => setPhase(i), 900 * i);
-    });
-    setTimeout(() => {
-      onUploaded(
-        files.map((f, i) => ({
-          id: `up-${Date.now()}-${i}`,
-          title: f.name.replace(/\.(pdf|docx)$/i, ""),
-          area,
-          source: "Cargado por Laura Mantilla",
-          format: f.format,
-          pages: 12 + i * 7,
-          lastUpdated: "2026-10-02",
-          status: i === 0 ? "Procesando" : "Requiere revisión",
-        })),
-      );
-    }, 900 * PIPELINE.length);
+  const startUpload = async () => {
+    if (!selectedFile) return;
+
+    setError(null);
+    setPhase(0); // Subiendo
+
+    const timer1 = setTimeout(() => setPhase(1), 1200); // Extrayendo
+    const timer2 = setTimeout(() => setPhase(2), 2400); // Indexando
+
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile.file);
+      formData.append("title", title || selectedFile.name.replace(/\.pdf$/i, ""));
+      if (description) formData.append("description", description);
+      formData.append("area", area);
+      formData.append("sourceName", "Sergio Flórez & Abogados");
+
+      const res = await fetch("/api/knowledge/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+
+      const json = await res.json();
+
+      if (!res.ok || json.error) {
+        throw new Error(json.error || "Error al indexar el documento.");
+      }
+
+      setPhase(3); // Indexado
+
+      if (json.document) {
+        onUploaded([json.document]);
+      }
+    } catch (err: any) {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      setPhase(-1);
+      setError(err?.message || "No fue posible indexar el documento.");
+    }
   };
 
   const done = phase === PIPELINE.length - 1;
@@ -89,12 +131,12 @@ export function UploadModal({
       open={open}
       onClose={close}
       size="lg"
-      title="Agregar conocimiento"
-      subtitle="Cargue documentos autorizados para alimentar NEXA Laboral AI."
-      icon={<CloudUpload className="h-5 w-5" />}
+      title="Agregar conocimiento especializado"
+      subtitle="Cargue documentos jurídicos o metodológicos en PDF para indexarlos en la base de conocimiento vectorial."
+      icon={<CloudUpload className="h-5 w-5 text-indigo-600" />}
       footer={
         <>
-          <span className="text-[12px] text-slate-400">PDF y DOCX · hasta 50 MB por archivo</span>
+          <span className="text-[12px] text-slate-400">PDF con texto · hasta 50 MB</span>
           <div className="flex gap-2">
             {done ? (
               <Button onClick={close}>Listo</Button>
@@ -103,14 +145,14 @@ export function UploadModal({
                 <Button variant="ghost" onClick={close} disabled={processing}>
                   Cancelar
                 </Button>
-                <Button variant="ai" onClick={start} disabled={files.length === 0 || processing}>
+                <Button variant="ai" onClick={startUpload} disabled={!selectedFile || processing}>
                   {processing ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Procesando…
+                      Indexando…
                     </>
                   ) : (
-                    `Cargar ${files.length || ""} documento${files.length === 1 ? "" : "s"}`
+                    "Indexar documento"
                   )}
                 </Button>
               </>
@@ -120,107 +162,168 @@ export function UploadModal({
       }
     >
       <div className="space-y-5">
+        {error && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50/70 p-3.5 text-[13px] text-rose-800">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+            <p className="flex-1">{error}</p>
+          </div>
+        )}
+
         {phase === -1 && (
           <>
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragging(false);
-                addFiles(e.dataTransfer.files);
-              }}
-              onClick={() => inputRef.current?.click()}
-              className={cn(
-                "flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition",
-                dragging ? "border-indigo-400 bg-indigo-50/60" : "border-slate-200 bg-slate-50/50 hover:border-indigo-300 hover:bg-indigo-50/30",
-              )}
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200">
-                <CloudUpload className="h-6 w-6" />
+            {!selectedFile ? (
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  handleFileSelect(e.dataTransfer.files);
+                }}
+                onClick={() => inputRef.current?.click()}
+                className={cn(
+                  "flex cursor-pointer flex-col items-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition",
+                  dragging
+                    ? "border-indigo-400 bg-indigo-50/60"
+                    : "border-slate-200 bg-slate-50/50 hover:border-indigo-300 hover:bg-indigo-50/30"
+                )}
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm ring-1 ring-slate-200">
+                  <CloudUpload className="h-6 w-6" />
+                </div>
+                <div className="mt-4 text-[14px] font-semibold text-slate-900">
+                  Arrastre un archivo PDF aquí o haga clic para seleccionarlo
+                </div>
+                <div className="mt-1 text-[12.5px] text-slate-500">
+                  Políticas internas, guías metodológicas, circulares o normas colombianas
+                </div>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  hidden
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                />
               </div>
-              <div className="mt-4 text-[14px] font-semibold text-slate-900">Arrastre archivos aquí o haga clic para seleccionarlos</div>
-              <div className="mt-1 text-[12.5px] text-slate-500">PDF o DOCX: leyes, decretos, políticas internas, guías y metodologías especializadas</div>
-              <input ref={inputRef} type="file" accept=".pdf,.docx" multiple hidden onChange={(e) => addFiles(e.target.files)} />
-            </div>
-            {files.length === 0 && (
-              <button onClick={() => setFiles(SAMPLE_FILES)} className="text-[12.5px] font-medium text-indigo-600 hover:text-indigo-700">
-                Usar documentos de ejemplo para la demostración →
-              </button>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-[11px] font-bold text-rose-600">
+                    PDF
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13.5px] font-semibold text-slate-900">
+                      {selectedFile.name}
+                    </div>
+                    <div className="text-[12px] text-slate-400">{selectedFile.size}</div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedFile(null)}
+                    className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    aria-label="Quitar archivo"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-[12.5px] font-medium text-slate-700">
+                      Título en el Centro de Conocimiento
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Nombre del documento..."
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[12.5px] font-medium text-slate-700">
+                      Descripción (opcional)
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={2}
+                      placeholder="Alcance, objetivo o contexto del documento..."
+                      className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="mb-1.5 text-[12.5px] font-medium text-slate-700">
+                      Área de conocimiento
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {areas.map((a) => (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => setArea(a.id)}
+                          className={cn(
+                            "rounded-xl border px-3 py-2.5 text-left text-[12.5px] font-medium transition",
+                            area === a.id
+                              ? "border-indigo-400 bg-indigo-50/50 text-indigo-800 ring-4 ring-indigo-500/10"
+                              : "border-slate-200 text-slate-600 hover:border-slate-300"
+                          )}
+                        >
+                          {a.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </>
         )}
 
-        {files.length > 0 && (
-          <div className="space-y-2">
-            {files.map((f, i) => (
-              <div key={`${f.name}-${i}`} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3.5 py-3">
-                <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-[10px] font-bold", f.format === "PDF" ? "bg-rose-50 text-rose-600" : "bg-sky-50 text-sky-600")}>
-                  {f.format === "PDF" ? "PDF" : <FileText className="h-4 w-4" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-medium text-slate-800">{f.name}</div>
-                  {phase >= 0 ? (
-                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-linear-to-r from-indigo-500 to-cyan-500 transition-[width] duration-700" style={{ width: `${((phase + 1) / PIPELINE.length) * 100}%` }} />
-                    </div>
-                  ) : (
-                    <div className="text-[11.5px] text-slate-400">{f.size}</div>
-                  )}
-                </div>
-                {phase === -1 && (
-                  <button onClick={() => setFiles(files.filter((_, j) => j !== i))} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Quitar">
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-                {done && <Check className="h-4 w-4 text-emerald-500" />}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {phase === -1 ? (
-          <div>
-            <div className="mb-2 text-[13px] font-medium text-slate-700">Área de conocimiento</div>
-            <div className="grid grid-cols-2 gap-2">
-              {areas.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() => setArea(a.id)}
-                  className={cn(
-                    "rounded-xl border px-3 py-2.5 text-left text-[13px] font-medium transition",
-                    area === a.id ? "border-indigo-400 bg-indigo-50/50 text-indigo-800 ring-4 ring-indigo-500/10" : "border-slate-200 text-slate-600 hover:border-slate-300",
-                  )}
-                >
-                  {a.name}
-                </button>
-              ))}
+        {phase >= 0 && (
+          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-5">
+            <div className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-400">
+              Proceso de incorporación y vectorización RAG
             </div>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-            <div className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-slate-400">Proceso de incorporación con IA</div>
             <div className="grid grid-cols-4 gap-2">
               {PIPELINE.map((p, i) => (
                 <div key={p} className="flex flex-col items-center gap-2 text-center">
                   <span
                     className={cn(
                       "flex h-8 w-8 items-center justify-center rounded-full transition",
-                      i < phase || done ? "bg-emerald-500 text-white" : i === phase ? "bg-indigo-100 text-indigo-600" : "bg-white text-slate-300 ring-1 ring-slate-200",
+                      i < phase || done
+                        ? "bg-emerald-500 text-white"
+                        : i === phase
+                        ? "bg-indigo-100 text-indigo-600"
+                        : "bg-white text-slate-300 ring-1 ring-slate-200"
                     )}
                   >
-                    {i < phase || done ? <Check className="h-4 w-4" /> : i === phase ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-[11px] font-semibold">{i + 1}</span>}
+                    {i < phase || done ? (
+                      <Check className="h-4 w-4" />
+                    ) : i === phase ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <span className="text-[11px] font-semibold">{i + 1}</span>
+                    )}
                   </span>
-                  <span className={cn("text-[11.5px] font-medium", i <= phase ? "text-slate-700" : "text-slate-400")}>{p}</span>
+                  <span
+                    className={cn(
+                      "text-[11.5px] font-medium",
+                      i <= phase ? "text-slate-700" : "text-slate-400"
+                    )}
+                  >
+                    {p}
+                  </span>
                 </div>
               ))}
             </div>
             {done && (
-              <div className="mt-4 animate-slide-up rounded-lg bg-emerald-50 px-3 py-2.5 text-[12.5px] text-emerald-800 ring-1 ring-inset ring-emerald-600/15">
-                Documentos agregados a <b>{areas.find((a) => a.id === area)?.name}</b>. Alimentarán las respuestas de NEXA Laboral AI una vez finalice su revisión.
+              <div className="mt-4 animate-slide-up rounded-lg bg-emerald-50 px-3.5 py-3 text-[12.5px] text-emerald-800 ring-1 ring-inset ring-emerald-600/15">
+                Documento indexado con éxito en <b>{areas.find((a) => a.id === area)?.name}</b>. Sus fragmentos y vectores ya están disponibles para búsqueda semántica en <b>NEXA Laboral AI</b>.
               </div>
             )}
           </div>
