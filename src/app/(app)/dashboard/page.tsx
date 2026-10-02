@@ -1,5 +1,6 @@
 import { ArrowRight, BrainCircuit, CalendarDays, Download, Megaphone, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { PartnerMark } from "@/components/brand/Logo";
 import { CampaignCard } from "@/components/campaigns/CampaignCard";
@@ -32,8 +33,21 @@ export default async function DashboardPage() {
               <CalendarDays className="h-4 w-4" />
               Viernes, 2 de octubre de 2026
             </div>
-            <h2 className="mt-3 text-[30px] leading-tight font-semibold tracking-tight">Buenos días</h2>
-            <div className="mt-1 text-lg font-medium text-indigo-200">Financiera Comultrasan</div>
+            <div className="mt-4 flex items-center gap-3.5">
+              <div className="flex h-11 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white px-2 py-1 shadow-md">
+                <Image
+                  src="/brand/comultrasan-logo.png"
+                  alt="Financiera Comultrasan"
+                  width={80}
+                  height={40}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div>
+                <h2 className="text-[28px] leading-tight font-semibold tracking-tight">Buenos días</h2>
+                <div className="text-[15px] font-medium text-indigo-200">Financiera Comultrasan</div>
+              </div>
+            </div>
             <p className="mt-1 text-[14px] text-slate-400">Inteligencia integral de su población</p>
             <p className="mt-4 text-[13.5px] leading-relaxed text-slate-300">
               NEXA transforma los datos de su organización en conocimiento para comprender, caracterizar y tomar mejores decisiones sobre su población.

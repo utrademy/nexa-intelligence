@@ -20,6 +20,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/brand/Logo";
 import { Card } from "@/components/ui/Card";
@@ -404,8 +405,14 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
           </div>
           <div className={cn("mt-4 space-y-3 transition", !useOrgData && "opacity-40")}>
             <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-                <Building2 className="h-4 w-4" />
+              <span className="flex h-9 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200/80 bg-white p-1 shadow-xs">
+                <Image
+                  src="/brand/comultrasan-logo.png"
+                  alt="Financiera Comultrasan"
+                  width={48}
+                  height={24}
+                  className="h-full w-full object-contain"
+                />
               </span>
               <div>
                 <div className="text-[13px] font-medium text-slate-800">Financiera Comultrasan</div>

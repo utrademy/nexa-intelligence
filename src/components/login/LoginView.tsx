@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Lock, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Endorsement, Logo, LogoMark, PartnerMark } from "@/components/brand/Logo";
@@ -153,9 +154,18 @@ export function LoginView() {
             <PartnerMark tone="dark" label="Inteligencia laboral con el respaldo de" className="items-center" />
           </div>
 
-          <p className="mt-8 text-center text-[12px] text-slate-400 lg:mt-10">
-            Entorno de demostración · Financiera Comultrasan · Todos los datos son ficticios
-          </p>
+          <div className="mt-8 flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-center text-[12px] text-slate-500 lg:mt-10">
+            <span className="flex h-5 w-7 shrink-0 items-center justify-center overflow-hidden rounded bg-white p-0.5 shadow-2xs">
+              <Image
+                src="/brand/comultrasan-logo.png"
+                alt="Financiera Comultrasan"
+                width={28}
+                height={14}
+                className="h-full w-full object-contain"
+              />
+            </span>
+            <span>Entorno de demostración · <strong className="font-semibold text-slate-700">Financiera Comultrasan</strong></span>
+          </div>
         </div>
       </div>
     </div>

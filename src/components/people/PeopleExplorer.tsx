@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Download, Layers, Megaphone, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -60,9 +61,22 @@ export function PeopleExplorer({ people, total, filterOptions }: { people: Perso
         <div>
           <h2 className="text-[26px] font-semibold tracking-tight text-slate-900">Inteligencia de Personas</h2>
           <p className="mt-1 text-[14px] text-slate-500">Explore, filtre y comprenda su universo de asociados, clientes o empleados.</p>
-          <p className="mt-0.5 text-[13px] text-slate-400">
-            <span className="font-semibold text-slate-600">{formatNumber(total)}</span> asociados · Financiera Comultrasan
-          </p>
+          <div className="mt-1 flex items-center gap-2 text-[13px] text-slate-500">
+            <span className="font-semibold text-slate-700">{formatNumber(total)}</span> asociados
+            <span className="text-slate-300">·</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11.5px] font-medium text-slate-700 shadow-2xs">
+              <span className="flex h-3.5 w-5 shrink-0 items-center justify-center overflow-hidden">
+                <Image
+                  src="/brand/comultrasan-logo.png"
+                  alt="Financiera Comultrasan"
+                  width={20}
+                  height={10}
+                  className="h-full w-full object-contain"
+                />
+              </span>
+              Financiera Comultrasan
+            </span>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={() => toast.show("Exportación en cola: recibirá un enlace seguro por correo electrónico")}>

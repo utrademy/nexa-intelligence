@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, Building2, ChevronRight, CircleCheck, Menu, Search, Sparkles, TriangleAlert, Upload } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -165,9 +166,15 @@ export function Header({ onMenu }: { onMenu: () => void }) {
         )}
       </div>
 
-      <div className="hidden items-center gap-1.5 rounded-full border border-emerald-200/70 bg-emerald-50/70 py-1 pr-3 pl-1.5 text-[12px] font-medium text-emerald-800 xl:flex">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15">
-          <Building2 className="h-3 w-3" />
+      <div className="hidden items-center gap-2 rounded-full border border-emerald-200/70 bg-emerald-50/70 py-1 pr-3 pl-1.5 text-[12px] font-medium text-emerald-800 xl:flex">
+        <span className="flex h-5 w-7 shrink-0 items-center justify-center overflow-hidden rounded bg-white p-0.5 shadow-2xs">
+          <Image
+            src={ORGANIZATION.logo}
+            alt={ORGANIZATION.name}
+            width={28}
+            height={14}
+            className="h-full w-full object-contain"
+          />
         </span>
         {ORGANIZATION.name}
       </div>

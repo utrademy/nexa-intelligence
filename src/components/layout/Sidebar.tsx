@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, LogOut, Sparkles } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/brand/Logo";
@@ -68,8 +69,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="relative mt-auto space-y-2 p-3">
         <button className="flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5 text-left transition hover:bg-white/[0.06]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 text-[11px] font-bold text-white">
-            {ORGANIZATION.initials}
+          <div className="flex h-8 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white p-1 shadow-xs ring-1 ring-white/10">
+            <Image
+              src={ORGANIZATION.logo}
+              alt={ORGANIZATION.name}
+              width={36}
+              height={20}
+              className="h-full w-full object-contain"
+            />
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13px] font-semibold text-white">{ORGANIZATION.name}</div>

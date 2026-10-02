@@ -12,6 +12,7 @@ export const ORGANIZATION = {
   name: "Financiera Comultrasan",
   plan: "Enterprise · Demo",
   initials: "FC",
+  logo: "/brand/comultrasan-logo.png",
 };
 
 export const CURRENT_USER = {
