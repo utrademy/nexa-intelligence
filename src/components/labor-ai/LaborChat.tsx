@@ -1,0 +1,318 @@
+"use client";
+
+import {
+  ArrowRight,
+  ArrowUp,
+  BookOpen,
+  Building2,
+  ClipboardList,
+  Database,
+  FileSearch,
+  Gavel,
+  HardHat,
+  Paperclip,
+  Plus,
+  RotateCcw,
+  Scale,
+  ShieldCheck,
+  Sparkles,
+  Users,
+} from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { LogoMark } from "@/components/brand/Logo";
+import { Card } from "@/components/ui/Card";
+import { DISCLAIMER, getMockAssistantResponse, SUGGESTED_QUESTIONS } from "@/lib/mock/labor-ai";
+import { ENDORSEMENT } from "@/lib/mock/knowledge";
+import type { ChatMessage, KnowledgeArea } from "@/lib/types";
+import { cn, formatNumber } from "@/lib/format";
+import { AssistantMessage, UserMessage } from "./ChatMessage";
+
+const SUGGESTION_ICONS = [Gavel, Users, FileSearch, ClipboardList];
+const AREA_ICONS = { "labor-law": Scale, "social-security": ShieldCheck, osh: HardHat, "sergio-flores": BookOpen };
+
+function KnowledgeEquation() {
+  return (
+    <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[12.5px] font-medium">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-emerald-800">
+        <Database className="h-3.5 w-3.5" />
+        Datos de su organización
+      </span>
+      <Plus className="h-3.5 w-3.5 text-slate-400" />
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50/80 px-3 py-1.5 text-violet-800">
+        <Scale className="h-3.5 w-3.5" />
+        Conocimiento laboral especializado
+      </span>
+      <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-linear-to-r from-indigo-600 to-cyan-600 px-3 py-1.5 text-white shadow-md shadow-indigo-500/25">
+        <Sparkles className="h-3.5 w-3.5" />
+        Inteligencia accionable
+      </span>
+    </div>
+  );
+}
+
+export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [enabledAreas, setEnabledAreas] = useState(() => new Set(areas.map((a) => a.id)));
+  const [useOrgData, setUseOrgData] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
+
+  const ask = (question: string) => {
+    const q = question.trim();
+    if (!q || busy) return;
+    const now = new Date().toISOString();
+    setMessages((prev) => [
+      ...prev,
+      { id: `u-${prev.length}`, role: "user", content: q, createdAt: now },
+      { id: `a-${prev.length}`, role: "assistant", response: getMockAssistantResponse(q), createdAt: now },
+    ]);
+    setInput("");
+    setBusy(true);
+    requestAnimationFrame(scrollToBottom);
+  };
+
+  const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
+  const totalDocs = areas.filter((a) => enabledAreas.has(a.id)).reduce((s, a) => s + a.documents, 0);
+
+  return (
+    <div className="mx-auto grid max-w-[1440px] gap-6 xl:grid-cols-[1fr_320px]">
+      <Card className="relative flex h-[calc(100vh-8rem)] min-h-[620px] flex-col overflow-hidden">
+        <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <LogoMark className="h-10 w-10" />
+              <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+            </div>
+            <div>
+              <h2 className="flex items-center gap-2 text-[17px] font-semibold tracking-tight text-slate-900">
+                NEXA Laboral AI
+                <span className="rounded-md bg-linear-to-r from-indigo-500 to-cyan-500 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-white">BETA</span>
+              </h2>
+              <p className="text-[12.5px] text-slate-500">Inteligencia especializada en derecho laboral colombiano</p>
+              <p className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium text-violet-700">
+                <BookOpen className="h-3 w-3" />
+                Con conocimiento especializado de {ENDORSEMENT}
+              </p>
+            </div>
+          </div>
+          {messages.length > 0 && (
+            <button
+              onClick={() => {
+                setMessages([]);
+                setBusy(false);
+              }}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] whitespace-nowrap font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Nueva conversación
+            </button>
+          )}
+        </div>
+
+        <div ref={scrollRef} className="scrollbar-thin flex-1 overflow-y-auto scroll-smooth">
+          {messages.length === 0 ? (
+            <div className="relative flex min-h-full flex-col items-center justify-center px-6 py-7">
+              <div className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
+              <div className="pointer-events-none absolute top-1/4 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-indigo-400/15 blur-3xl" />
+              <div className="relative flex max-w-3xl animate-slide-up flex-col items-center text-center">
+                <LogoMark className="h-12 w-12 shadow-xl shadow-indigo-500/30" />
+                <h3 className="mt-4 max-w-2xl text-[22px] leading-snug font-semibold tracking-tight text-slate-900">
+                  Su información organizacional y el conocimiento laboral especializado, <span className="text-gradient-ai">en un solo lugar.</span>
+                </h3>
+                <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-slate-500">
+                  Consulte temas de derecho laboral colombiano, seguridad social, inclusión laboral y seguridad y salud en el trabajo. NEXA puede combinar
+                  conocimiento jurídico autorizado con el contexto y los datos disponibles de su organización.
+                </p>
+                <KnowledgeEquation />
+
+                <div className="mt-7 text-[15px] font-semibold text-slate-900">¿Qué necesita analizar hoy?</div>
+                <div className="mt-3 grid w-full gap-2.5 md:grid-cols-2">
+                  {SUGGESTED_QUESTIONS.map((q, i) => {
+                    const Icon = SUGGESTION_ICONS[i % SUGGESTION_ICONS.length];
+                    return (
+                      <button
+                        key={q}
+                        onClick={() => ask(q)}
+                        className="group flex items-start gap-3 rounded-2xl border border-slate-200 bg-white/90 px-4 py-3.5 text-left backdrop-blur transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-[0_12px_32px_-12px_rgba(99,102,241,0.35)]"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 transition group-hover:bg-indigo-600 group-hover:text-white">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="text-[13px] leading-relaxed text-slate-700">{q}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto max-w-4xl space-y-8 px-6 py-8">
+              {messages.map((m) =>
+                m.role === "user" ? (
+                  <UserMessage key={m.id} message={m} />
+                ) : (
+                  <AssistantMessage
+                    key={m.id}
+                    response={m.response!}
+                    animate={m.id === lastAssistantId}
+                    onProgress={scrollToBottom}
+                    onDone={() => setBusy(false)}
+                  />
+                ),
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-slate-100 bg-white px-6 pt-4 pb-4">
+          {messages.length > 0 && !busy && (
+            <div className="mb-3 flex gap-2 overflow-x-auto [scrollbar-width:none]">
+              {SUGGESTED_QUESTIONS.map((q) => (
+                <button
+                  key={q}
+                  onClick={() => ask(q)}
+                  className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                >
+                  {q.length > 64 ? `${q.slice(0, 64)}…` : q}
+                </button>
+              ))}
+            </div>
+          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              ask(input);
+            }}
+            className="rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-500/10"
+          >
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  ask(input);
+                }
+              }}
+              rows={2}
+              placeholder="Consulte sobre derecho laboral, seguridad social, inclusión o cumplimiento…"
+              className="block w-full resize-none rounded-2xl bg-transparent px-4 pt-3 text-[14px] text-slate-800 placeholder:text-slate-400 focus:outline-none"
+            />
+            <div className="flex items-center justify-between px-3 pb-2.5">
+              <div className="flex items-center gap-2">
+                <button type="button" className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Adjuntar">
+                  <Paperclip className="h-4 w-4" />
+                </button>
+                <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                  <ShieldCheck className="h-3 w-3" />
+                  Basado en conocimiento NEXA · {formatNumber(totalDocs)} documentos
+                </span>
+              </div>
+              <button
+                type="submit"
+                disabled={!input.trim() || busy}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-white transition hover:bg-slate-700 disabled:bg-slate-200 disabled:text-slate-400"
+                aria-label="Enviar"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+            </div>
+          </form>
+        </div>
+      </Card>
+
+      <div className="space-y-6">
+        <Card className="p-5">
+          <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-900">
+            <Sparkles className="h-4 w-4 text-indigo-500" />
+            Fuentes de conocimiento
+          </div>
+          <p className="mt-1 text-[12.5px] text-slate-500">Las respuestas se basan únicamente en fuentes autorizadas e indexadas.</p>
+          <div className="mt-4 space-y-2">
+            {areas.map((a) => {
+              const Icon = AREA_ICONS[a.id];
+              const on = enabledAreas.has(a.id);
+              return (
+                <button
+                  key={a.id}
+                  onClick={() =>
+                    setEnabledAreas((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(a.id)) next.delete(a.id);
+                      else next.add(a.id);
+                      return next;
+                    })
+                  }
+                  className={cn("flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition", on ? "border-slate-200 bg-white" : "border-dashed border-slate-200 bg-slate-50/50 opacity-60")}
+                >
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                      !on ? "bg-slate-100 text-slate-400" : a.id === "sergio-flores" ? "bg-violet-50 text-violet-600" : "bg-indigo-50 text-indigo-600",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] leading-snug font-medium text-slate-800">{a.name}</span>
+                    <span className="block text-[11.5px] text-slate-400">{a.documents} documentos</span>
+                  </span>
+                  <span className={cn("relative h-5 w-9 shrink-0 rounded-full transition", on ? "bg-indigo-600" : "bg-slate-300")}>
+                    <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all", on ? "left-[18px]" : "left-0.5")} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-900">
+              <Database className="h-4 w-4 text-emerald-500" />
+              Contexto de la organización
+            </div>
+            <button
+              onClick={() => setUseOrgData((v) => !v)}
+              className={cn("relative h-5 w-9 rounded-full transition", useOrgData ? "bg-emerald-500" : "bg-slate-300")}
+              aria-label="Activar o desactivar datos de la organización"
+            >
+              <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all", useOrgData ? "left-[18px]" : "left-0.5")} />
+            </button>
+          </div>
+          <div className={cn("mt-4 space-y-3 transition", !useOrgData && "opacity-40")}>
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                <Building2 className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="text-[13px] font-medium text-slate-800">Financiera Comultrasan</div>
+                <div className="text-[11.5px] text-slate-400">Institución financiera cooperativa · 480 empleados</div>
+              </div>
+            </div>
+            {[
+              { label: "Asociados", value: "500.000" },
+              { label: "Cobertura de caracterización", value: "68 %" },
+              { label: "Cobertura de información de inclusión", value: "34 %" },
+              { label: "Campañas con IA activas", value: "2" },
+            ].map((r) => (
+              <div key={r.label} className="flex items-center justify-between gap-3 text-[12.5px]">
+                <span className="text-slate-500">{r.label}</span>
+                <span className="font-semibold text-slate-800 tabular-nums">{r.value}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/60 p-4 text-[12px] leading-relaxed text-amber-900">{DISCLAIMER}</div>
+      </div>
+    </div>
+  );
+}

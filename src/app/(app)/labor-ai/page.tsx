@@ -1,0 +1,10 @@
+import type { Metadata } from "next";
+import { LaborChat } from "@/components/labor-ai/LaborChat";
+import { getKnowledgeData } from "@/lib/data";
+
+export const metadata: Metadata = { title: "NEXA Laboral AI" };
+
+export default async function LaborAiPage() {
+  const { areas } = await getKnowledgeData();
+  return <LaborChat areas={areas} />;
+}
