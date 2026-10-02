@@ -209,6 +209,8 @@ export interface ChatMessage {
   content: string;
   status?: "pending" | "done" | "error";
   createdAt: string;
+  dataUsed?: boolean;
+  sampleSize?: number;
 }
 
 export interface LaborAiTurn {
@@ -222,4 +224,11 @@ export interface LaborAiRequest {
   includeOrgContext?: boolean;
 }
 
-export type LaborAiResponse = { answer: string } | { error: string };
+export type LaborAiResponse =
+  | {
+      answer: string;
+      dataUsed?: boolean;
+      sampleSize?: number;
+    }
+  | { error: string };
+

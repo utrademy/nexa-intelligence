@@ -50,7 +50,7 @@ async function requestAnswer(question: string, history: LaborAiTurn[], includeOr
   });
   const data = (await res.json().catch(() => null)) as LaborAiResponse | null;
   if (!res.ok || !data || !("answer" in data) || !data.answer) throw new Error("labor-ai request failed");
-  return data.answer;
+  return { answer: data.answer, dataUsed: data.dataUsed, sampleSize: data.sampleSize };
 }
 
 const SUGGESTION_ICONS = [Gavel, Users, FileSearch, ClipboardList];
@@ -111,9 +111,15 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
 
     const controller = new AbortController();
     requestRef.current = controller;
-    let update: Pick<ChatMessage, "content" | "status">;
+    let update: Pick<ChatMessage, "content" | "status" | "dataUsed" | "sampleSize">;
     try {
-      update = { content: await requestAnswer(q, toHistory(base), useOrgData, controller.signal), status: "done" };
+      const res = await requestAnswer(q, toHistory(base), useOrgData, controller.signal);
+      update = {
+        content: res.answer,
+        dataUsed: res.dataUsed,
+        sampleSize: res.sampleSize,
+        status: "done",
+      };
     } catch {
       if (controller.signal.aborted) return;
       update = { content: ERROR_MESSAGE, status: "error" };

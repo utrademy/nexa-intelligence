@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, CircleCheck, Clock3, Copy, Info, Loader2, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
+import { AlertCircle, Check, CircleCheck, Clock3, Copy, Database, Info, Loader2, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useState } from "react";
 import { LogoMark } from "@/components/brand/Logo";
 import { Avatar } from "@/components/ui/Avatar";
@@ -49,10 +49,18 @@ export function AssistantMessage({ message, onRetry }: { message: ChatMessageTyp
                 Análisis no disponible
               </span>
             ) : (
-              <span className="flex items-center gap-2 text-[12px] text-slate-600">
-                <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />
-                Respuesta generada por <b className="font-semibold text-slate-800">NEXA Laboral AI</b>
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-2 text-[12px] text-slate-600">
+                  <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />
+                  Respuesta generada por <b className="font-semibold text-slate-800">NEXA Laboral AI</b>
+                </span>
+                {message.dataUsed && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-800 shadow-xs">
+                    <Database className="h-3 w-3 text-emerald-600" />
+                    Datos organizacionales analizados · Muestra POC: {message.sampleSize || 600} perfiles
+                  </span>
+                )}
+              </div>
             )}
             {!failed && (
               <span className="flex items-center gap-1.5 text-[11px] text-slate-400">

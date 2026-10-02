@@ -1,8 +1,9 @@
 export const SUGGESTED_QUESTIONS = [
-  "¿Qué aspectos debería revisar una organización con 480 empleados frente a sus obligaciones de inclusión laboral?",
-  "Analice nuestra población caracterizada e identifique vacíos de información relevantes para nuestra estrategia de inclusión.",
-  "¿Qué documentación debería revisar antes de implementar un programa de inclusión laboral?",
-  "Con base en nuestros datos actuales, ¿qué situaciones laborales requieren revisión prioritaria?",
+  "Analiza nuestra población e identifica las principales brechas de información.",
+  "¿Cuántas personas tienen información laboral incompleta y qué deberíamos revisar?",
+  "Analiza nuestros datos de inclusión y dime qué información hace falta.",
+  "¿En qué ciudades tenemos mayores brechas de caracterización?",
+  "¿Qué aspectos debería revisar una empresa colombiana frente a sus obligaciones laborales de inclusión?",
 ];
 
 export const DISCLAIMER =

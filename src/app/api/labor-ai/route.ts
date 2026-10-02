@@ -1,15 +1,21 @@
 import OpenAI from "openai";
 import {
   DEMO_ORG_CONTEXT,
+  LABOR_AI_DATA_ERROR_MESSAGE,
   LABOR_AI_ERROR_MESSAGE,
   LABOR_AI_INSTRUCTIONS,
   LABOR_AI_LIMITS,
   LABOR_AI_MODEL,
 } from "@/lib/ai/labor-ai";
+import {
+  formatSnapshotForPrompt,
+  getOrganizationIntelligenceSnapshot,
+} from "@/lib/data-intelligence/organization-snapshot";
+import { shouldFetchOrganizationalData } from "@/lib/data-intelligence/routing";
 import type { LaborAiResponse, LaborAiTurn } from "@/lib/types";
 
-function fail(status: number) {
-  return Response.json({ error: LABOR_AI_ERROR_MESSAGE } satisfies LaborAiResponse, { status });
+function fail(status: number, message = LABOR_AI_ERROR_MESSAGE) {
+  return Response.json({ error: message } satisfies LaborAiResponse, { status });
 }
 
 function parseBody(body: unknown) {
@@ -49,7 +55,28 @@ export async function POST(request: Request) {
   }
   if (!parsed) return fail(400);
 
-  const instructions = parsed.includeOrgContext ? `${LABOR_AI_INSTRUCTIONS}\n\n${DEMO_ORG_CONTEXT}` : LABOR_AI_INSTRUCTIONS;
+  let instructions = LABOR_AI_INSTRUCTIONS;
+  let dataUsed = false;
+  let sampleSize: number | undefined;
+
+  // Determine if question requires real database intelligence
+  const requiresOrgData = parsed.includeOrgContext && shouldFetchOrganizationalData(parsed.question);
+
+  if (requiresOrgData) {
+    console.log("[labor-ai] Routing query to Supabase Organizational Data Intelligence Layer...");
+    const snapshot = await getOrganizationIntelligenceSnapshot();
+    if (!snapshot) {
+      console.error("[labor-ai] Failed to retrieve organizational snapshot from Supabase");
+      return fail(503, LABOR_AI_DATA_ERROR_MESSAGE);
+    }
+    const dataBlock = formatSnapshotForPrompt(snapshot);
+    instructions = `${LABOR_AI_INSTRUCTIONS}\n\n${dataBlock}`;
+    dataUsed = true;
+    sampleSize = snapshot.dataset.sampleSize;
+    console.log(`[labor-ai] Organizational data injected. Real sample size: ${sampleSize}`);
+  } else if (parsed.includeOrgContext) {
+    instructions = `${LABOR_AI_INSTRUCTIONS}\n\n${DEMO_ORG_CONTEXT}`;
+  }
 
   try {
     const client = new OpenAI({ apiKey, timeout: LABOR_AI_LIMITS.timeoutMs, maxRetries: 1 });
@@ -67,7 +94,12 @@ export async function POST(request: Request) {
       console.error("[labor-ai] Empty response from model", { status: response.status });
       return fail(502);
     }
-    return Response.json({ answer } satisfies LaborAiResponse);
+
+    return Response.json({
+      answer,
+      dataUsed,
+      sampleSize,
+    } satisfies LaborAiResponse);
   } catch (error) {
     if (error instanceof OpenAI.APIError) {
       console.error("[labor-ai] OpenAI request failed", { status: error.status, type: error.type, code: error.code });
