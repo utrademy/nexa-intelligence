@@ -80,13 +80,38 @@ export async function getOrganizationIntelligenceSnapshot(): Promise<Organizatio
     // 1. Fetch organization metadata
     const { data: orgData } = await supabase.from("organizations").select("*").limit(1).single();
 
-    // 2. Fetch all people in sample
-    const { data: people, error: peopleError } = await supabase
-      .from("people")
-      .select("id, city, department, employment_status, education_level, characterization_score, profile_status, contactable, inclusion_information_status");
+    // 2. Fetch all people in sample (paginated to load all records beyond PostgREST 1000 limit)
+    const people: Array<{
+      id: string;
+      city: string | null;
+      department: string | null;
+      employment_status: string | null;
+      education_level: string | null;
+      characterization_score: number | null;
+      profile_status: string | null;
+      contactable: boolean | null;
+      inclusion_information_status: string | null;
+    }> = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: chunk, error: chunkError } = await supabase
+        .from("people")
+        .select("id, city, department, employment_status, education_level, characterization_score, profile_status, contactable, inclusion_information_status")
+        .range(from, from + pageSize - 1);
 
-    if (peopleError || !people || people.length === 0) {
-      console.warn("[data-intelligence] Could not load people from DB:", peopleError?.message);
+      if (chunkError) {
+        console.warn("[data-intelligence] Could not load people chunk:", chunkError.message);
+        break;
+      }
+      if (!chunk || chunk.length === 0) break;
+      people.push(...chunk);
+      if (chunk.length < pageSize) break;
+      from += pageSize;
+    }
+
+    if (people.length === 0) {
+      console.warn("[data-intelligence] No people records found in DB");
       return null;
     }
 
