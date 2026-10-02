@@ -1,7 +1,7 @@
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { chunkPages } from "./chunking";
 import { getChunkEmbeddings } from "./embeddings";
-import { extractPdfText } from "./extract";
+import { extractPdfText, toCleanUint8Array } from "./extract";
 
 export interface IngestDocumentParams {
   fileBuffer: Uint8Array | Buffer;
@@ -19,19 +19,24 @@ export interface IngestResult {
   title: string;
   pageCount: number;
   chunkCount: number;
-  status: "INDEXED" | "FAILED";
-  errorMessage?: string;
+  status: "INDEXED";
 }
 
 /**
  * End-to-end ingestion pipeline:
  * File -> Supabase Storage -> PDF Text Extraction -> Semantic Chunking -> Embeddings -> Vector Store
+ *
+ * Guaranteed cleanup on failure: deletes any partial chunks, uploaded storage files, or
+ * temporary document rows so that failed uploads never leave orphan artifacts or false records.
  */
 export async function ingestKnowledgeDocument(
   params: IngestDocumentParams
 ): Promise<IngestResult> {
   const supabase = getSupabaseServerClient();
   const sourceName = params.sourceName || "Sergio Flórez & Abogados";
+
+  // Ensure binary data is an isolated, pure Uint8Array (PDF.js in unpdf explicitly requires Uint8Array rather than Buffer)
+  const uint8Data = toCleanUint8Array(params.fileBuffer);
 
   // 1. Create document entry with PROCESSING status
   const { data: docRecord, error: docError } = await supabase
@@ -54,47 +59,28 @@ export async function ingestKnowledgeDocument(
   }
 
   const documentId = docRecord.id;
+  const storagePath = `documents/${documentId}/${params.fileName}`;
 
   try {
     // 2. Upload file to Supabase Storage (knowledge-documents bucket)
-    const storagePath = `documents/${documentId}/${params.fileName}`;
     const { error: storageError } = await supabase.storage
       .from("knowledge-documents")
-      .upload(storagePath, params.fileBuffer, {
+      .upload(storagePath, uint8Data, {
         contentType: params.mimeType,
         upsert: true,
       });
 
     if (storageError) {
       console.warn("[knowledge/ingest] Storage upload notice:", storageError.message);
-      // We proceed even if storage had an issue, since vector search works on chunks
     }
 
     // 3. Extract text from PDF
-    const extraction = await extractPdfText(params.fileBuffer);
+    const extraction = await extractPdfText(uint8Data);
 
     if (extraction.isScannedOrEmpty) {
-      const errorMsg =
-        "El documento no contiene texto legible (posible PDF escaneado). Se requerirá soporte OCR en una fase posterior.";
-      await supabase
-        .from("knowledge_documents")
-        .update({
-          status: "FAILED",
-          error_message: errorMsg,
-          page_count: extraction.totalPages,
-          storage_path: storagePath,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", documentId);
-
-      return {
-        documentId,
-        title: params.title,
-        pageCount: extraction.totalPages,
-        chunkCount: 0,
-        status: "FAILED",
-        errorMessage: errorMsg,
-      };
+      throw new Error(
+        "El documento no contiene texto legible (posible PDF escaneado). Se requerirá soporte OCR en una fase posterior."
+      );
     }
 
     // 4. Create semantic chunks
@@ -155,16 +141,19 @@ export async function ingestKnowledgeDocument(
       status: "INDEXED",
     };
   } catch (err: any) {
-    const errorMsg = err?.message || "Error inesperado durante la indexación del documento.";
-    await supabase
-      .from("knowledge_documents")
-      .update({
-        status: "FAILED",
-        error_message: errorMsg,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", documentId);
+    console.error("[knowledge/ingest] Ingestion failure, rolling back artifacts:", err?.message);
 
-    throw new Error(errorMsg);
+    // Clean up partial artifacts safely
+    try {
+      await Promise.all([
+        supabase.from("knowledge_chunks").delete().eq("document_id", documentId),
+        supabase.storage.from("knowledge-documents").remove([storagePath]),
+        supabase.from("knowledge_documents").delete().eq("id", documentId),
+      ]);
+    } catch (cleanupErr) {
+      console.warn("[knowledge/ingest] Cleanup warning:", cleanupErr);
+    }
+
+    throw err;
   }
 }

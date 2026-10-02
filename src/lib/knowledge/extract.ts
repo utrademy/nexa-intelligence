@@ -1,4 +1,4 @@
-import { extractText, getMeta } from "unpdf";
+import { extractText } from "unpdf";
 
 export interface ExtractedPage {
   pageNumber: number;
@@ -13,13 +13,42 @@ export interface ExtractionResult {
 }
 
 /**
- * Extracts page-by-page text from a PDF Buffer or Uint8Array.
+ * Converts any binary input (Buffer, ArrayBuffer, TypedArray view) into an isolated,
+ * pure Uint8Array with its own dedicated memory buffer.
+ *
+ * This completely satisfies Mozilla PDF.js's strict requirement:
+ * "Please provide binary data as `Uint8Array`, rather than `Buffer`."
+ * while avoiding transferable ArrayBuffer clone errors in Node runtimes.
+ */
+export function toCleanUint8Array(input: Uint8Array | ArrayBuffer | Buffer): Uint8Array {
+  if (Buffer.isBuffer(input)) {
+    const copy = new Uint8Array(input.length);
+    copy.set(input);
+    return copy;
+  }
+  if (input instanceof ArrayBuffer) {
+    const copy = new Uint8Array(input.byteLength);
+    copy.set(new Uint8Array(input));
+    return copy;
+  }
+  if (ArrayBuffer.isView(input)) {
+    const copy = new Uint8Array(input.byteLength);
+    copy.set(new Uint8Array(input.buffer, input.byteOffset, input.byteLength));
+    return copy;
+  }
+  return new Uint8Array(input);
+}
+
+/**
+ * Extracts page-by-page text from a PDF Uint8Array, ArrayBuffer, or Buffer.
  * If the PDF has no readable text (e.g. scanned image), marks isScannedOrEmpty = true
  * without hallucinating any content.
  */
-export async function extractPdfText(buffer: Uint8Array | ArrayBuffer): Promise<ExtractionResult> {
+export async function extractPdfText(
+  buffer: Uint8Array | ArrayBuffer | Buffer
+): Promise<ExtractionResult> {
   try {
-    const uint8 = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    const uint8 = toCleanUint8Array(buffer);
     const { text, totalPages } = await extractText(uint8);
 
     const pages: ExtractedPage[] = [];
@@ -53,6 +82,10 @@ export async function extractPdfText(buffer: Uint8Array | ArrayBuffer): Promise<
     };
   } catch (error) {
     console.error("[knowledge/extract] Error extracting text from PDF:", error);
+    const msg = error instanceof Error ? error.message : "";
+    if (msg.toLowerCase().includes("password")) {
+      throw new Error("El archivo PDF está protegido con contraseña.");
+    }
     throw new Error(
       error instanceof Error ? error.message : "Error al procesar el archivo PDF"
     );

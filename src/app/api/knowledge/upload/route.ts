@@ -7,7 +7,10 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const title = (formData.get("title") as string)?.trim() || file?.name.replace(/\.[^/.]+$/, "") || "Documento";
+    const title =
+      (formData.get("title") as string)?.trim() ||
+      file?.name.replace(/\.[^/.]+$/, "") ||
+      "Documento";
     const description = (formData.get("description") as string)?.trim() || undefined;
     const area = (formData.get("area") as string)?.trim() || "labor-law";
     const sourceName = (formData.get("sourceName") as string)?.trim() || "Sergio Flórez & Abogados";
@@ -23,11 +26,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Convert file to pure Uint8Array (PDF.js in unpdf explicitly requires Uint8Array rather than Buffer)
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const uint8Array = new Uint8Array(arrayBuffer);
 
     const result = await ingestKnowledgeDocument({
-      fileBuffer: buffer,
+      fileBuffer: uint8Array,
       fileName: file.name,
       mimeType: file.type || "application/pdf",
       fileSize: file.size,
@@ -53,14 +57,25 @@ export async function POST(request: Request) {
       },
     });
   } catch (err: any) {
-    console.error("[api/knowledge/upload] Upload error:", err);
+    console.error("[api/knowledge/upload] Server technical error:", err);
+
+    const rawMessage = (err?.message || "").toLowerCase();
+    let userFacingMessage =
+      "No fue posible procesar el PDF. Verifique que el archivo contenga texto seleccionable e inténtelo nuevamente.";
+
+    if (rawMessage.includes("escaneado") || rawMessage.includes("ocr") || rawMessage.includes("no contiene texto")) {
+      userFacingMessage =
+        "El documento no contiene texto legible (posible PDF escaneado). Se requerirá soporte OCR en una fase posterior.";
+    } else if (rawMessage.includes("contraseña") || rawMessage.includes("password")) {
+      userFacingMessage =
+        "El archivo PDF está protegido con contraseña. Por favor cargue un documento desprotegido.";
+    }
+
     return NextResponse.json(
       {
-        error:
-          err?.message ||
-          "Ocurrió un error al procesar e indexar el documento en la base de conocimiento.",
+        error: userFacingMessage,
       },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }
