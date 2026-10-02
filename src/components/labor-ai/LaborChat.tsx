@@ -58,7 +58,13 @@ async function requestAnswer(
   });
   const data = (await res.json().catch(() => null)) as LaborAiResponse | null;
   if (!res.ok || !data || !("answer" in data) || !data.answer) throw new Error("labor-ai request failed");
-  return { answer: data.answer, dataUsed: data.dataUsed, sampleSize: data.sampleSize, sources: data.sources };
+  return {
+    answer: data.answer,
+    dataUsed: data.dataUsed,
+    sampleSize: data.sampleSize,
+    sources: data.sources,
+    mode: data.mode,
+  };
 }
 
 const SUGGESTION_ICONS = [Gavel, Users, FileSearch, ClipboardList];
@@ -128,7 +134,7 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
 
     const controller = new AbortController();
     requestRef.current = controller;
-    let update: Pick<ChatMessage, "content" | "status" | "dataUsed" | "sampleSize" | "sources">;
+    let update: Pick<ChatMessage, "content" | "status" | "dataUsed" | "sampleSize" | "sources" | "mode">;
     try {
       const activeAreas = Array.from(enabledAreas).filter((id) =>
         areas.some((a) => a.id === id && a.documents > 0)
@@ -139,6 +145,7 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
         dataUsed: res.dataUsed,
         sampleSize: res.sampleSize,
         sources: res.sources,
+        mode: res.mode,
         status: "done",
       };
     } catch {

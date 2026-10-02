@@ -218,7 +218,10 @@ export interface ChatMessage {
   dataUsed?: boolean;
   sampleSize?: number;
   sources?: SourceCitation[];
+  mode?: IntelligenceMode;
 }
+
+export type IntelligenceMode = "GENERAL" | "ORGANIZATIONAL" | "KNOWLEDGE" | "COMBINED";
 
 export interface LaborAiTurn {
   role: "user" | "assistant";
@@ -238,6 +241,7 @@ export type LaborAiResponse =
       dataUsed?: boolean;
       sampleSize?: number;
       sources?: SourceCitation[];
+      mode?: IntelligenceMode;
     }
   | { error: string };
 

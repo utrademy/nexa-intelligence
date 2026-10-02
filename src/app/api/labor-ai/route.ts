@@ -6,12 +6,16 @@ import {
   LABOR_AI_INSTRUCTIONS,
   LABOR_AI_LIMITS,
   LABOR_AI_MODEL,
+  getModeInstructions,
 } from "@/lib/ai/labor-ai";
 import {
   formatSnapshotForPrompt,
   getOrganizationIntelligenceSnapshot,
 } from "@/lib/data-intelligence/organization-snapshot";
-import { shouldFetchOrganizationalData } from "@/lib/data-intelligence/routing";
+import {
+  classifyQuestionContext,
+  shouldFetchOrganizationalData,
+} from "@/lib/data-intelligence/routing";
 import {
   formatChunksAsCitations,
   searchKnowledgeChunks,
@@ -81,10 +85,22 @@ export async function POST(request: Request) {
   let sampleSize: number | undefined;
   let sources: SourceCitation[] | undefined;
 
-  // 1. Determine if question requires real database intelligence
-  const requiresOrgData = parsed.includeOrgContext && shouldFetchOrganizationalData(parsed.question);
+  // 1. Determine mode using deterministic classification
+  const hasActiveKnowledgeFilters = parsed.knowledgeAreas.length > 0;
+  const shouldRetrieveDocs = shouldPerformKnowledgeRetrieval(parsed.question);
+  const classification = classifyQuestionContext(parsed.question, {
+    includeOrgContext: parsed.includeOrgContext,
+    hasActiveKnowledgeFilters,
+    shouldRetrieveDocs,
+  });
 
-  if (requiresOrgData) {
+  const mode = classification.mode;
+  console.log(
+    `[labor-ai] Classified query mode: ${mode} (asksOrg: ${classification.asksOrg}, asksKnowledge: ${classification.asksKnowledge}, canUseOrg: ${classification.canUseOrg}, canUseKnowledge: ${classification.canUseKnowledge})`
+  );
+
+  // 2. Fetch and inject real database intelligence if applicable
+  if (classification.canUseOrg) {
     console.log("[labor-ai] Routing query to Supabase Organizational Data Intelligence Layer...");
     const snapshot = await getOrganizationIntelligenceSnapshot();
     if (!snapshot) {
@@ -103,12 +119,8 @@ export async function POST(request: Request) {
     instructions = `${instructions}\n\n[AVISO DE CONTEXTO ORGANIZACIONAL: El usuario ha desactivado el acceso a los datos de la organización. NO mencione ni asuma datos internos de Financiera Comultrasan ni métricas demográficas internas en su respuesta. Responda estrictamente desde el marco normativo legal general.]`;
   }
 
-  // 2. Determine if question requires or benefits from specialized document knowledge (RAG)
-  // RAG retrieval is ONLY performed if at least one knowledge source filter is enabled/selected
-  const hasActiveKnowledgeFilters = parsed.knowledgeAreas.length > 0;
-  const shouldRetrieveDocs = hasActiveKnowledgeFilters && shouldPerformKnowledgeRetrieval(parsed.question);
-
-  if (shouldRetrieveDocs) {
+  // 3. Determine if question requires or benefits from specialized document knowledge (RAG)
+  if (classification.canUseKnowledge) {
     console.log(`[labor-ai] Checking Knowledge Center for filters: [${parsed.knowledgeAreas.join(", ")}]...`);
     const retrievedChunks = await searchKnowledgeChunks(parsed.question, {
       matchThreshold: 0.35,
@@ -142,6 +154,9 @@ export async function POST(request: Request) {
     }
   }
 
+  // 4. Inject mode-specific instructions
+  instructions = `${instructions}\n\n${getModeInstructions(mode, sampleSize)}`;
+
   try {
     const client = new OpenAI({ apiKey, timeout: LABOR_AI_LIMITS.timeoutMs, maxRetries: 1 });
     const response = await client.responses.create({
@@ -164,6 +179,7 @@ export async function POST(request: Request) {
       dataUsed,
       sampleSize,
       sources,
+      mode,
     } satisfies LaborAiResponse);
   } catch (error) {
     if (error instanceof OpenAI.APIError) {

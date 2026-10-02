@@ -1,3 +1,5 @@
+import type { IntelligenceMode } from "@/lib/types";
+
 /**
  * Determines whether a user question requires organizational data from Supabase.
  * Keeps the routing simple, deterministic, and fast.
@@ -21,6 +23,9 @@ export function shouldFetchOrganizationalData(question: string): boolean {
     "en nuestra entidad",
     "de nuestra entidad",
     "comultrasan",
+    "priorizar la recoleccion",
+    "recoleccion de informacion",
+    "donde deberiamos priorizar",
   ];
 
   for (const term of orgTerms) {
@@ -37,8 +42,8 @@ export function shouldFetchOrganizationalData(question: string): boolean {
     /brechas\s+de\s+(informacion|caracterizacion|empleo|inclusion|datos)/,
     /vacios\s+criticos/,
     /informacion\s+(laboral|de\s+empleo|ocupacional)\s+incompleta/,
-    /datos\s+de\s+inclusion\s+y/,
-    /analiza\s+(nuestra|los\s+datos|la\s+poblacion|la\s+muestra)/,
+    /datos\s+de\s+(inclusion|caracterizacion)/,
+    /analiza\s+(nuestra|los\s+datos|la\s+poblacion|la\s+muestra|nuestros\s+datos)/,
     /problemas\s+ves\s+en\s+nuestra/,
     /estado\s+de\s+nuestra\s+caracterizacion/,
   ];
@@ -48,4 +53,53 @@ export function shouldFetchOrganizationalData(question: string): boolean {
   }
 
   return false;
+}
+
+export interface ClassificationResult {
+  mode: IntelligenceMode;
+  asksOrg: boolean;
+  asksKnowledge: boolean;
+  canUseOrg: boolean;
+  canUseKnowledge: boolean;
+}
+
+/**
+ * Classifies a user query into one of four deterministic modes:
+ * - COMBINED: User asks for organizational data AND legal knowledge, with both toggles active.
+ * - ORGANIZATIONAL: User asks for organizational metrics with Org Context active.
+ * - KNOWLEDGE: User asks for legal/normative advice with Knowledge filter active.
+ * - GENERAL: Neither active or query is purely general conceptual legal guidance.
+ */
+export function classifyQuestionContext(
+  question: string,
+  options: {
+    includeOrgContext: boolean;
+    hasActiveKnowledgeFilters: boolean;
+    shouldRetrieveDocs: boolean;
+  }
+): ClassificationResult {
+  const asksOrg = shouldFetchOrganizationalData(question);
+  const asksKnowledge = options.shouldRetrieveDocs;
+
+  const canUseOrg = options.includeOrgContext && asksOrg;
+  const canUseKnowledge = options.hasActiveKnowledgeFilters && asksKnowledge;
+
+  let mode: IntelligenceMode = "GENERAL";
+  if (canUseOrg && canUseKnowledge) {
+    mode = "COMBINED";
+  } else if (canUseOrg) {
+    mode = "ORGANIZATIONAL";
+  } else if (canUseKnowledge) {
+    mode = "KNOWLEDGE";
+  } else {
+    mode = "GENERAL";
+  }
+
+  return {
+    mode,
+    asksOrg,
+    asksKnowledge,
+    canUseOrg,
+    canUseKnowledge,
+  };
 }

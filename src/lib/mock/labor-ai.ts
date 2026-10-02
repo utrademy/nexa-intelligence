@@ -1,8 +1,8 @@
 export const SUGGESTED_QUESTIONS = [
-  "Analiza nuestra población e identifica las principales brechas de información.",
-  "Según nuestros documentos, ¿qué procedimiento debemos seguir para casos de estabilidad laboral reforzada?",
-  "Analiza nuestra población y dime qué deberíamos revisar según nuestra documentación sobre inclusión.",
-  "¿Cuántas personas tienen información laboral incompleta y qué deberíamos revisar?",
+  "Analiza nuestra población e identifica las principales brechas de información laboral y qué deberíamos revisar.",
+  "¿Cuántas personas tienen información laboral incompleta y qué aspectos deberían revisarse según nuestra documentación?",
+  "Analiza nuestros datos de caracterización y dime dónde deberíamos priorizar la recolección de información.",
+  "¿Cuáles son los tres elementos esenciales para que exista un contrato de trabajo según el Código Sustantivo del Trabajo?",
   "¿Qué aspectos debería revisar una empresa colombiana frente a sus obligaciones laborales de inclusión?",
 ];
 

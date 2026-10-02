@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, BookOpen, Check, CircleCheck, Clock3, Copy, Database, Info, Loader2, RotateCcw, ThumbsDown, ThumbsUp } from "lucide-react";
+import { AlertCircle, BookOpen, Check, CircleCheck, Clock3, Copy, Database, Info, Loader2, RotateCcw, Sparkles, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useState } from "react";
 import { LogoMark } from "@/components/brand/Logo";
 import { Avatar } from "@/components/ui/Avatar";
@@ -25,6 +25,7 @@ export function AssistantMessage({ message, onRetry }: { message: ChatMessageTyp
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const pending = message.status === "pending";
   const failed = message.status === "error";
+  const isCombined = message.mode === "COMBINED" || (Boolean(message.dataUsed) && (message.sources?.length ?? 0) > 0);
 
   return (
     <div className="flex animate-slide-up gap-3">
@@ -36,7 +37,7 @@ export function AssistantMessage({ message, onRetry }: { message: ChatMessageTyp
           <div
             className={cn(
               "flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-b border-slate-100 px-5 py-3",
-              pending ? "bg-indigo-50/40" : failed ? "bg-amber-50/50" : "bg-slate-50/60",
+              pending ? "bg-indigo-50/40" : failed ? "bg-amber-50/50" : isCombined ? "bg-gradient-to-r from-indigo-50/70 via-violet-50/40 to-slate-50/60" : "bg-slate-50/60",
             )}
           >
             {pending ? (
@@ -55,6 +56,12 @@ export function AssistantMessage({ message, onRetry }: { message: ChatMessageTyp
                   <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />
                   Respuesta generada por <b className="font-semibold text-slate-800">NEXA Laboral AI</b>
                 </span>
+                {isCombined && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/80 bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-900 shadow-xs">
+                    <Sparkles className="h-3 w-3 text-indigo-600" />
+                    INTELIGENCIA COMBINADA: Datos organizacionales + Fuentes documentales
+                  </span>
+                )}
                 {message.dataUsed && (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-800 shadow-xs">
                     <Database className="h-3 w-3 text-emerald-600" />
@@ -70,10 +77,20 @@ export function AssistantMessage({ message, onRetry }: { message: ChatMessageTyp
               </div>
             )}
             {!failed && (
-              message.sources && message.sources.length > 0 ? (
+              isCombined ? (
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700">
+                  <Sparkles className="h-3 w-3 text-indigo-600" />
+                  Motor Combinado · Datos + RAG
+                </span>
+              ) : message.sources && message.sources.length > 0 ? (
                 <span className="flex items-center gap-1.5 text-[11px] font-medium text-violet-700">
                   <BookOpen className="h-3 w-3 text-violet-600" />
                   RAG activo · Sergio Flórez &amp; Abogados
+                </span>
+              ) : message.dataUsed ? (
+                <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-700">
+                  <Database className="h-3 w-3 text-emerald-600" />
+                  Datos organizacionales activos
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5 text-[11px] text-slate-400">

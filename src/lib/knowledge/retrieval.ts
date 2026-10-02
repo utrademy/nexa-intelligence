@@ -171,41 +171,58 @@ export function formatChunksAsCitations(chunks: RetrievedChunk[]): SourceCitatio
  * internal documents, legal standards, Sergio Flórez knowledge, or general legal queries.
  */
 export function shouldPerformKnowledgeRetrieval(question: string): boolean {
-  const q = question.toLowerCase();
+  if (!question || typeof question !== "string") return false;
+  const q = question.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  // Explicit keywords asking about documentation or procedures
+  // Explicit keywords asking about documentation, procedures or legal analysis
   const docKeywords = [
-    "según",
+    "segun",
     "documento",
     "documentos",
+    "documentacion",
     "norma",
     "normativa",
     "ley",
     "decreto",
-    "resolución",
-    "código",
-    "política",
+    "resolucion",
+    "codigo",
+    "politica",
     "procedimiento",
-    "guía",
-    "metodología",
+    "guia",
+    "metodologia",
     "sergio",
-    "flórez",
+    "florez",
     "flores",
     "jurisprudencia",
     "corte",
     "estabilidad laboral",
     "ajustes razonables",
-    "inclusión laboral",
+    "inclusion laboral",
     "sst",
     "seguridad y salud",
     "pila",
     "reforma laboral",
     "contrato",
     "despido",
-    "indemnización",
+    "indemnizacion",
     "discapacidad",
-    "reubicación",
+    "reubicacion",
     "fuero",
+    "juridica",
+    "juridico",
+    "juridicas",
+    "juridicos",
+    "cst",
+    "obligacion",
+    "obligaciones",
+    "que deberiamos revisar",
+    "que deberia revisarse",
+    "aspectos deberian revisarse",
+    "aspectos deberiamos revisar",
+    "consideraciones juridicas",
+    "evaluacion juridica",
+    "marco normativo",
+    "revisar segun",
   ];
 
   return docKeywords.some((kw) => q.includes(kw));
