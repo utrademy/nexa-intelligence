@@ -2,7 +2,7 @@
 
 import { ArrowRight, BookOpen, Database, FileText, HardHat, Plus, Scale, Search, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Endorsement } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useToast } from "@/components/ui/Toast";
 import { AREA_LABEL } from "@/lib/mock/knowledge";
 import type { KnowledgeArea, KnowledgeAreaId, KnowledgeDocument } from "@/lib/types";
-import { cn, formatDate, formatNumber } from "@/lib/format";
+import { cn, formatDate } from "@/lib/format";
 import { UploadModal } from "./UploadModal";
 
 const AREA_STYLE: Record<KnowledgeAreaId, { icon: typeof Scale; gradient: string; tone: string }> = {
@@ -59,8 +59,6 @@ export function KnowledgeCenter({
     [documents, areaFilter, query]
   );
 
-  const totalCatalogDocs = areas.reduce((s, a) => s + a.documents, 0);
-
   return (
     <div className="mx-auto max-w-[1440px] space-y-6">
       <div className="flex animate-fade-in flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -86,11 +84,11 @@ export function KnowledgeCenter({
           <div className="flex flex-1 flex-wrap items-center justify-center gap-3 lg:justify-start">
             <div className="flex items-center gap-2 rounded-xl border border-indigo-400/40 bg-indigo-500/20 px-3.5 py-2 text-[13px] font-medium text-indigo-100 shadow-xs backdrop-blur">
               <Sparkles className="h-4 w-4 text-indigo-300" />
-              Documentos indexados en esta demo: <b className="font-semibold text-white">{currentRealCount}</b>
+              Documentos reales indexados: <b className="font-semibold text-white">{currentRealCount}</b>
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-2 text-[12.5px] whitespace-nowrap text-slate-300 backdrop-blur">
-              <FileText className="h-4 w-4 text-slate-400" />
-              {formatNumber(totalCatalogDocs)} referencias en catálogo normativo
+              <FileText className="h-4 w-4 text-indigo-300" />
+              Base vectorial pgvector (1536 dimensiones)
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3.5 py-2 text-[12.5px] whitespace-nowrap text-slate-300 backdrop-blur">
               <Database className="h-4 w-4 text-emerald-400" />
@@ -123,6 +121,7 @@ export function KnowledgeCenter({
         {areas.map((a, i) => {
           const style = AREA_STYLE[a.id] || AREA_STYLE["labor-law"];
           const active = areaFilter === a.id;
+          const count = a.documents + (extraCounts[a.id] ?? 0);
           return (
             <button
               key={a.id}
@@ -148,27 +147,26 @@ export function KnowledgeCenter({
                 <style.icon className="h-5 w-5" />
               </div>
               <div className="mt-4 text-[15px] font-semibold text-slate-900">{a.name}</div>
-              <div className="mt-0.5 text-[24px] font-semibold tracking-tight text-slate-900 tabular-nums">
-                {a.documents + (extraCounts[a.id] ?? 0)}{" "}
-                <span className="text-[13px] font-normal text-slate-400">referencias</span>
+              <div className="mt-0.5 text-[22px] font-semibold tracking-tight text-slate-900 tabular-nums">
+                {count}{" "}
+                <span className="text-[12.5px] font-normal text-slate-400">
+                  {count === 1 ? "documento real indexado" : "documentos reales indexados"}
+                </span>
               </div>
               <p className="mt-2 line-clamp-3 text-[12.5px] leading-relaxed text-slate-500">
                 {a.description}
               </p>
               <div className="mt-4">
                 <div className="mb-1.5 flex items-center justify-between text-[11.5px]">
-                  <span className="text-slate-400">Cobertura temática</span>
-                  <span className="font-semibold text-slate-700">{a.coverage} %</span>
+                  <span className="text-slate-400">Disponibilidad RAG</span>
+                  <span className="font-semibold text-slate-700">{count > 0 ? "100 %" : "0 %"}</span>
                 </div>
-                <ProgressBar value={a.coverage} barClassName={cn("bg-linear-to-r", style.gradient)} />
+                <ProgressBar value={count > 0 ? 100 : 0} barClassName={cn("bg-linear-to-r", style.gradient)} />
               </div>
               <div className="mt-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5 text-[11.5px] text-slate-400">
-                <span className="whitespace-nowrap">Actualizado el {formatDate(a.lastUpdated)}</span>
-                {a.id === "sergio-flores" && (
-                  <span className="rounded bg-violet-50 px-1.5 py-0.5 text-[10.5px] font-medium whitespace-nowrap text-violet-600">
-                    Núcleo metodológico
-                  </span>
-                )}
+                <span className="whitespace-nowrap">
+                  {count > 0 ? `Actualizado el ${formatDate(a.lastUpdated)}` : "Sin documentos aún"}
+                </span>
               </div>
             </button>
           );
@@ -178,10 +176,10 @@ export function KnowledgeCenter({
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 px-6 pt-5 pb-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="text-[15px] font-semibold text-slate-900">Documentos</h3>
+            <h3 className="text-[15px] font-semibold text-slate-900">Documentos indexados</h3>
             <p className="text-[13px] text-slate-500">
               {areaFilter === "all" ? "Todas las áreas de conocimiento" : AREA_LABEL[areaFilter]} ·{" "}
-              {visible.length} visibles
+              {visible.length} {visible.length === 1 ? "documento real" : "documentos reales"}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -216,7 +214,7 @@ export function KnowledgeCenter({
           <table className="w-full min-w-[900px] text-left">
             <thead>
               <tr className="border-y border-slate-100 bg-slate-50/60">
-                {["Documento", "Área de conocimiento", "Fuente", "Última actualización", "Estado IA"].map((h) => (
+                {["Documento", "Área de conocimiento", "Fuente / Origen", "Última actualización", "Estado IA"].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-2.5 whitespace-nowrap text-[11.5px] font-semibold uppercase tracking-wider text-slate-500 first:pl-6"
@@ -232,10 +230,7 @@ export function KnowledgeCenter({
                 return (
                   <tr
                     key={d.id}
-                    className={cn(
-                      "transition hover:bg-slate-50/70",
-                      d.isReal && "bg-indigo-50/20 font-medium"
-                    )}
+                    className="bg-white transition hover:bg-slate-50/70"
                   >
                     <td className="py-3 pr-4 pl-6">
                       <div className="flex items-center gap-3">
@@ -254,13 +249,13 @@ export function KnowledgeCenter({
                             <span className="truncate text-[13.5px] font-medium text-slate-900">
                               {d.title}
                             </span>
-                            {d.isReal && (
-                              <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-[10.5px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
-                                Vectorizado RAG
-                              </span>
-                            )}
+                            <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-[10.5px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+                              Vectorizado RAG
+                            </span>
                           </div>
-                          <div className="text-[12px] text-slate-400">{d.pages} páginas</div>
+                          <div className="text-[12px] text-slate-400">
+                            {d.pages} páginas · {d.chunkCount || d.pages} fragmentos
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -280,24 +275,7 @@ export function KnowledgeCenter({
                       {formatDate(d.lastUpdated)}
                     </td>
                     <td className="px-4 py-3">
-                      {d.status === "Requiere revisión" ? (
-                        <button
-                          onClick={() => {
-                            setDocuments((prev) =>
-                              prev.map((x) => (x.id === d.id ? { ...x, status: "Indexado" } : x))
-                            );
-                            toast.show("Documento aprobado e indexado");
-                          }}
-                          title="Aprobar documento"
-                        >
-                          <StatusBadge
-                            status={d.status}
-                            className="cursor-pointer hover:ring-amber-600/40"
-                          />
-                        </button>
-                      ) : (
-                        <StatusBadge status={d.status} />
-                      )}
+                      <StatusBadge status={d.status} />
                     </td>
                   </tr>
                 );
@@ -306,7 +284,7 @@ export function KnowledgeCenter({
           </table>
           {visible.length === 0 && (
             <div className="py-16 text-center text-[13px] text-slate-500">
-              Ningún documento coincide con su búsqueda.
+              No hay documentos indexados en esta categoría. Use el botón &quot;Agregar conocimiento&quot; para cargar un documento PDF.
             </div>
           )}
         </div>

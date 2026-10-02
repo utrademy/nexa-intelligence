@@ -105,9 +105,21 @@ export async function getKnowledgeData() {
     getRealIndexedCount(),
   ]);
 
+  // Real document counts and coverage per architectural knowledge area
+  const areas = knowledge.KNOWLEDGE_AREAS.map((a) => {
+    const areaDocs = realDocs.filter((d) => d.area === a.id && d.status === "Indexado");
+    const count = areaDocs.length;
+    return {
+      ...a,
+      documents: count,
+      coverage: count > 0 ? 100 : 0,
+      lastUpdated: areaDocs[0]?.lastUpdated || "2026-10-02",
+    };
+  });
+
   return {
-    areas: knowledge.KNOWLEDGE_AREAS,
-    documents: [...realDocs, ...knowledge.KNOWLEDGE_DOCUMENTS],
+    areas,
+    documents: realDocs, // Exclusively real documents that exist in Supabase PostgreSQL
     realIndexedCount: realCount,
   };
 }

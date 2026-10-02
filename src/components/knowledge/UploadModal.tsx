@@ -44,6 +44,7 @@ export function UploadModal({
 }) {
   const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
   const [title, setTitle] = useState("");
+  const [source, setSource] = useState("");
   const [description, setDescription] = useState("");
   const [area, setArea] = useState<KnowledgeAreaId>("labor-law");
   const [dragging, setDragging] = useState(false);
@@ -69,6 +70,7 @@ export function UploadModal({
   const reset = () => {
     setSelectedFile(null);
     setTitle("");
+    setSource("");
     setDescription("");
     setPhase(-1);
     setError(null);
@@ -89,12 +91,16 @@ export function UploadModal({
     const timer2 = setTimeout(() => setPhase(2), 2400); // Indexando
 
     try {
+      const finalSource =
+        source.trim() ||
+        (area === "sergio-flores" ? "Sergio Flórez & Abogados" : "Documento cargado");
+
       const formData = new FormData();
       formData.append("file", selectedFile.file);
       formData.append("title", title || selectedFile.name.replace(/\.pdf$/i, ""));
       if (description) formData.append("description", description);
       formData.append("area", area);
-      formData.append("sourceName", "Sergio Flórez & Abogados");
+      formData.append("sourceName", finalSource);
 
       const res = await fetch("/api/knowledge/upload", {
         method: "POST",
@@ -239,6 +245,23 @@ export function UploadModal({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="Nombre del documento..."
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[12.5px] font-medium text-slate-700">
+                      Fuente u origen del documento (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={source}
+                      onChange={(e) => setSource(e.target.value)}
+                      placeholder={
+                        area === "sergio-flores"
+                          ? "Sergio Flórez & Abogados"
+                          : "Ej: Ministerio del Trabajo, Diario Oficial, Documento cargado..."
+                      }
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none"
                     />
                   </div>

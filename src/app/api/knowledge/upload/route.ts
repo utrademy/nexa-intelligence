@@ -13,7 +13,9 @@ export async function POST(request: Request) {
       "Documento";
     const description = (formData.get("description") as string)?.trim() || undefined;
     const area = (formData.get("area") as string)?.trim() || "labor-law";
-    const sourceName = (formData.get("sourceName") as string)?.trim() || "Sergio Flórez & Abogados";
+    const sourceName =
+      (formData.get("sourceName") as string)?.trim() ||
+      (area === "sergio-flores" ? "Sergio Flórez & Abogados" : "Documento cargado");
 
     if (!file) {
       return NextResponse.json({ error: "No se proporcionó ningún archivo." }, { status: 400 });

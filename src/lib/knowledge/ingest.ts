@@ -33,7 +33,9 @@ export async function ingestKnowledgeDocument(
   params: IngestDocumentParams
 ): Promise<IngestResult> {
   const supabase = getSupabaseServerClient();
-  const sourceName = params.sourceName || "Sergio Flórez & Abogados";
+  const sourceName =
+    params.sourceName ||
+    (params.knowledgeArea === "sergio-flores" ? "Sergio Flórez & Abogados" : "Documento cargado");
 
   // Ensure binary data is an isolated, pure Uint8Array (PDF.js in unpdf explicitly requires Uint8Array rather than Buffer)
   const uint8Data = toCleanUint8Array(params.fileBuffer);
