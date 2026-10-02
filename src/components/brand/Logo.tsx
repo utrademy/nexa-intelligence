@@ -1,17 +1,19 @@
 import Image from "next/image";
+import { useId } from "react";
 import { cn } from "@/lib/format";
 
 export function LogoMark({ className }: { className?: string }) {
+  const gradientId = useId();
   return (
     <svg viewBox="0 0 32 32" className={cn("h-8 w-8", className)} aria-hidden>
       <defs>
-        <linearGradient id="nexa-mark" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+        <linearGradient id={gradientId} x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
           <stop stopColor="#818cf8" />
           <stop offset="0.55" stopColor="#8b5cf6" />
           <stop offset="1" stopColor="#22d3ee" />
         </linearGradient>
       </defs>
-      <rect width="32" height="32" rx="9" fill="url(#nexa-mark)" />
+      <rect width="32" height="32" rx="9" fill={`url(#${gradientId})`} />
       <path d="M10 22V10l12 12V10" fill="none" stroke="white" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="10" cy="10" r="2.2" fill="white" />
       <circle cx="22" cy="22" r="2.2" fill="white" />
@@ -55,7 +57,7 @@ export function PartnerMark({
   className,
 }: {
   tone?: "light" | "dark";
-  label?: string;
+  label?: React.ReactNode;
   size?: "sm" | "md";
   className?: string;
 }) {

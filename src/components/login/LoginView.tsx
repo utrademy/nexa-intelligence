@@ -74,7 +74,7 @@ export function LoginView() {
             <LogoMark className="h-11 w-11" />
           </div>
           <h2 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900">Bienvenido a NEXA Intelligence</h2>
-          <Endorsement tone="dark" className="mt-1" />
+          <Endorsement tone="dark" className="mt-1 hidden lg:block" />
           <p className="mt-3 text-[14px] text-slate-500">Conozca su gente. Entienda sus datos. Actúe con inteligencia.</p>
 
           <form
@@ -149,7 +149,11 @@ export function LoginView() {
             Continuar con SSO corporativo
           </button>
 
-          <p className="mt-10 text-center text-[12px] text-slate-400">
+          <div className="mt-10 flex justify-center border-t border-slate-100 pt-8 lg:hidden">
+            <PartnerMark tone="dark" label="Inteligencia laboral con el respaldo de" className="items-center" />
+          </div>
+
+          <p className="mt-8 text-center text-[12px] text-slate-400 lg:mt-10">
             Entorno de demostración · Financiera Comultrasan · Todos los datos son ficticios
           </p>
         </div>

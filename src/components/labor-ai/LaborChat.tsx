@@ -6,6 +6,7 @@ import {
   BookOpen,
   Building2,
   ClipboardList,
+  Clock3,
   Database,
   FileSearch,
   Gavel,
@@ -18,14 +19,39 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/brand/Logo";
 import { Card } from "@/components/ui/Card";
-import { DISCLAIMER, getMockAssistantResponse, SUGGESTED_QUESTIONS } from "@/lib/mock/labor-ai";
+import { DISCLAIMER, SUGGESTED_QUESTIONS } from "@/lib/mock/labor-ai";
 import { ENDORSEMENT } from "@/lib/mock/knowledge";
-import type { ChatMessage, KnowledgeArea } from "@/lib/types";
-import { cn, formatNumber } from "@/lib/format";
+import type { ChatMessage, KnowledgeArea, LaborAiResponse, LaborAiTurn } from "@/lib/types";
+import { cn } from "@/lib/format";
 import { AssistantMessage, UserMessage } from "./ChatMessage";
+
+const ERROR_MESSAGE = "No fue posible generar el análisis en este momento. Inténtelo nuevamente.";
+
+function toHistory(messages: ChatMessage[]): LaborAiTurn[] {
+  const turns: LaborAiTurn[] = [];
+  for (let i = 0; i + 1 < messages.length; i += 2) {
+    const [q, a] = [messages[i], messages[i + 1]];
+    if (q.role === "user" && a.role === "assistant" && a.status === "done") {
+      turns.push({ role: "user", content: q.content }, { role: "assistant", content: a.content });
+    }
+  }
+  return turns;
+}
+
+async function requestAnswer(question: string, history: LaborAiTurn[], includeOrgContext: boolean, signal: AbortSignal) {
+  const res = await fetch("/api/labor-ai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question, history, includeOrgContext }),
+    signal,
+  });
+  const data = (await res.json().catch(() => null)) as LaborAiResponse | null;
+  if (!res.ok || !data || !("answer" in data) || !data.answer) throw new Error("labor-ai request failed");
+  return data.answer;
+}
 
 const SUGGESTION_ICONS = [Gavel, Users, FileSearch, ClipboardList];
 const AREA_ICONS = { "labor-law": Scale, "social-security": ShieldCheck, osh: HardHat, "sergio-flores": BookOpen };
@@ -58,28 +84,54 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
   const [enabledAreas, setEnabledAreas] = useState(() => new Set(areas.map((a) => a.id)));
   const [useOrgData, setUseOrgData] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
+  const seqRef = useRef(0);
 
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, []);
 
-  const ask = (question: string) => {
+  useEffect(() => () => requestRef.current?.abort(), []);
+
+  const send = async (question: string, base: ChatMessage[]) => {
     const q = question.trim();
     if (!q || busy) return;
     const now = new Date().toISOString();
-    setMessages((prev) => [
-      ...prev,
-      { id: `u-${prev.length}`, role: "user", content: q, createdAt: now },
-      { id: `a-${prev.length}`, role: "assistant", response: getMockAssistantResponse(q), createdAt: now },
+    const seq = ++seqRef.current;
+    const assistantId = `a-${seq}`;
+    setMessages([
+      ...base,
+      { id: `u-${seq}`, role: "user", content: q, createdAt: now },
+      { id: assistantId, role: "assistant", content: "", status: "pending", createdAt: now },
     ]);
     setInput("");
     setBusy(true);
     requestAnimationFrame(scrollToBottom);
+
+    const controller = new AbortController();
+    requestRef.current = controller;
+    let update: Pick<ChatMessage, "content" | "status">;
+    try {
+      update = { content: await requestAnswer(q, toHistory(base), useOrgData, controller.signal), status: "done" };
+    } catch {
+      if (controller.signal.aborted) return;
+      update = { content: ERROR_MESSAGE, status: "error" };
+    }
+    if (requestRef.current !== controller) return;
+    requestRef.current = null;
+    setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, ...update } : m)));
+    setBusy(false);
+    requestAnimationFrame(scrollToBottom);
   };
 
-  const lastAssistantId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
-  const totalDocs = areas.filter((a) => enabledAreas.has(a.id)).reduce((s, a) => s + a.documents, 0);
+  const ask = (question: string) => send(question, messages);
+
+  const retry = (assistantId: string) => {
+    const idx = messages.findIndex((m) => m.id === assistantId);
+    if (idx < 1) return;
+    send(messages[idx - 1].content, messages.slice(0, idx - 1));
+  };
 
   return (
     <div className="mx-auto grid max-w-[1440px] gap-6 xl:grid-cols-[1fr_320px]">
@@ -105,6 +157,8 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
           {messages.length > 0 && (
             <button
               onClick={() => {
+                requestRef.current?.abort();
+                requestRef.current = null;
                 setMessages([]);
                 setBusy(false);
               }}
@@ -158,13 +212,7 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
                 m.role === "user" ? (
                   <UserMessage key={m.id} message={m} />
                 ) : (
-                  <AssistantMessage
-                    key={m.id}
-                    response={m.response!}
-                    animate={m.id === lastAssistantId}
-                    onProgress={scrollToBottom}
-                    onDone={() => setBusy(false)}
-                  />
+                  <AssistantMessage key={m.id} message={m} onRetry={busy ? undefined : () => retry(m.id)} />
                 ),
               )}
             </div>
@@ -210,9 +258,9 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
                 <button type="button" className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Adjuntar">
                   <Paperclip className="h-4 w-4" />
                 </button>
-                <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                  <ShieldCheck className="h-3 w-3" />
-                  Basado en conocimiento NEXA · {formatNumber(totalDocs)} documentos
+                <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                  <Clock3 className="h-3 w-3" />
+                  Base documental especializada: próxima integración
                 </span>
               </div>
               <button
@@ -234,7 +282,7 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
             <Sparkles className="h-4 w-4 text-indigo-500" />
             Fuentes de conocimiento
           </div>
-          <p className="mt-1 text-[12.5px] text-slate-500">Las respuestas se basan únicamente en fuentes autorizadas e indexadas.</p>
+          <p className="mt-1 text-[12.5px] text-slate-500">Áreas de la base documental especializada. Su conexión con las respuestas está prevista para la próxima integración.</p>
           <div className="mt-4 space-y-2">
             {areas.map((a) => {
               const Icon = AREA_ICONS[a.id];

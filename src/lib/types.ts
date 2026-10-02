@@ -203,18 +203,23 @@ export interface SourceCitation {
   relevance: number;
 }
 
-export interface AssistantResponse {
-  analysis: string;
-  dataContext?: { label: string; value: string }[];
-  considerations: string[];
-  actions: string[];
-  sources: SourceCitation[];
-}
-
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
-  content?: string;
-  response?: AssistantResponse;
+  content: string;
+  status?: "pending" | "done" | "error";
   createdAt: string;
 }
+
+export interface LaborAiTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface LaborAiRequest {
+  question: string;
+  history?: LaborAiTurn[];
+  includeOrgContext?: boolean;
+}
+
+export type LaborAiResponse = { answer: string } | { error: string };

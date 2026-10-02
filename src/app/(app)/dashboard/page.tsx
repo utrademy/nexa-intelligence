@@ -38,7 +38,15 @@ export default async function DashboardPage() {
             <p className="mt-4 text-[13.5px] leading-relaxed text-slate-300">
               NEXA transforma los datos de su organización en conocimiento para comprender, caracterizar y tomar mejores decisiones sobre su población.
             </p>
-            <PartnerMark size="sm" label="Inteligencia laboral con el respaldo de" className="mt-6 border-t border-white/10 pt-5" />
+            <PartnerMark
+              size="sm"
+              label={
+                <>
+                  <span className="hidden sm:inline">Inteligencia laboral </span>con el respaldo de
+                </>
+              }
+              className="mt-6 border-t border-white/10 pt-5"
+            />
           </div>
           <div className="flex flex-col gap-4 lg:items-end">
             <div className="flex max-w-md items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur">
@@ -50,12 +58,12 @@ export default async function DashboardPage() {
                 <span className="font-semibold text-white">1.204 perfiles</span> este mes, principalmente con información laboral y del hogar.
               </p>
             </div>
-            <div className="flex gap-2">
-              <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3.5 text-[13px] font-medium text-slate-200 transition hover:bg-white/10">
+            <div className="flex flex-wrap gap-2">
+              <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3.5 text-[13px] font-medium whitespace-nowrap text-slate-200 transition hover:bg-white/10">
                 <Download className="h-4 w-4" />
                 Exportar informe
               </button>
-              <Link href="/campaigns" className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3.5 text-[13px] font-medium text-slate-900 transition hover:bg-indigo-50">
+              <Link href="/campaigns" className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3.5 text-[13px] font-medium whitespace-nowrap text-slate-900 transition hover:bg-indigo-50">
                 <Megaphone className="h-4 w-4" />
                 Nueva campaña con IA
               </Link>
