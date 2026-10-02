@@ -3,6 +3,7 @@ import { PeopleExplorer } from "@/components/people/PeopleExplorer";
 import { getPeople } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Inteligencia de Personas" };
+export const dynamic = "force-dynamic";
 
 export default async function PeoplePage() {
   const { people, total, filterOptions } = await getPeople();

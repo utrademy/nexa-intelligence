@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { Person360 } from "@/components/person/Person360";
 import { getPersonProfile } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: PageProps<"/people/[id]">): Promise<Metadata> {
   const { id } = await params;
   const profile = await getPersonProfile(id);

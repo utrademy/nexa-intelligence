@@ -87,6 +87,28 @@ export function Person360({ profile }: { profile: PersonProfile }) {
     };
     setInteractions((prev) => [entry, ...prev]);
     setDocuments((prev) => prev.map((d) => (d.name.startsWith("Autorización de tratamiento de datos") ? { ...d, status: "Verificado", updatedAt: timestamp } : d)));
+
+    // Persist to Supabase in background
+    const filledFields = result.sections
+      .flatMap((s) => s.fields.map((f) => ({ category: s.id, ...f })))
+      .filter((f) => f.aiCollected);
+
+    fetch("/api/characterize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        personId: person.id,
+        score: profileScore(result.sections).score,
+        channel,
+        fields: filledFields.map((f) => ({
+          category: f.category,
+          key: f.key,
+          value: f.value,
+          confidence: f.confidence,
+        })),
+      }),
+    }).catch((err) => console.warn("[characterize] Persist warning:", err));
+
     return result.filled;
   };
 
