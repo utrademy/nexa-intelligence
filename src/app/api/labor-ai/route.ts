@@ -23,9 +23,11 @@ function fail(status: number, message = LABOR_AI_ERROR_MESSAGE) {
   return Response.json({ error: message } satisfies LaborAiResponse, { status });
 }
 
+export const dynamic = "force-dynamic";
+
 function parseBody(body: unknown) {
   if (!body || typeof body !== "object") return null;
-  const { question, history, includeOrgContext } = body as Record<string, unknown>;
+  const { question, history, includeOrgContext, knowledgeAreas } = body as Record<string, unknown>;
 
   if (typeof question !== "string") return null;
   const q = question.trim();
@@ -42,7 +44,21 @@ function parseBody(body: unknown) {
     }
   }
 
-  return { question: q, history: turns, includeOrgContext: includeOrgContext !== false };
+  const parsedAreas: string[] = [];
+  if (Array.isArray(knowledgeAreas)) {
+    for (const a of knowledgeAreas) {
+      if (typeof a === "string" && a.trim()) {
+        parsedAreas.push(a.trim());
+      }
+    }
+  }
+
+  return {
+    question: q,
+    history: turns,
+    includeOrgContext: includeOrgContext !== false,
+    knowledgeAreas: parsedAreas,
+  };
 }
 
 export async function POST(request: Request) {
@@ -82,16 +98,22 @@ export async function POST(request: Request) {
     console.log(`[labor-ai] Organizational data injected. Real sample size: ${sampleSize}`);
   } else if (parsed.includeOrgContext) {
     instructions = `${instructions}\n\n${DEMO_ORG_CONTEXT}`;
+  } else {
+    console.log("[labor-ai] Organization context toggle is OFF: omitting all organizational data.");
+    instructions = `${instructions}\n\n[AVISO DE CONTEXTO ORGANIZACIONAL: El usuario ha desactivado el acceso a los datos de la organización. NO mencione ni asuma datos internos de Financiera Comultrasan ni métricas demográficas internas en su respuesta. Responda estrictamente desde el marco normativo legal general.]`;
   }
 
   // 2. Determine if question requires or benefits from specialized document knowledge (RAG)
-  const shouldRetrieveDocs = shouldPerformKnowledgeRetrieval(parsed.question);
+  // RAG retrieval is ONLY performed if at least one knowledge source filter is enabled/selected
+  const hasActiveKnowledgeFilters = parsed.knowledgeAreas.length > 0;
+  const shouldRetrieveDocs = hasActiveKnowledgeFilters && shouldPerformKnowledgeRetrieval(parsed.question);
 
   if (shouldRetrieveDocs) {
-    console.log("[labor-ai] Checking Knowledge Center for semantically relevant chunks...");
+    console.log(`[labor-ai] Checking Knowledge Center for filters: [${parsed.knowledgeAreas.join(", ")}]...`);
     const retrievedChunks = await searchKnowledgeChunks(parsed.question, {
       matchThreshold: 0.35,
       matchCount: 4,
+      filterKnowledgeAreas: parsed.knowledgeAreas,
     });
 
     if (retrievedChunks.length > 0) {
@@ -100,11 +122,11 @@ export async function POST(request: Request) {
       sources = citations;
 
       const docBlock =
-        "DOCUMENT GROUNDING CONTEXT (RAG - SERGIO FLÓREZ & ABOGADOS):\n" +
+        "DOCUMENT GROUNDING CONTEXT (RAG - FUENTES DOCUMENTALES SELECCIONADAS):\n" +
         retrievedChunks
           .map(
             (c, i) =>
-              `[DOCUMENTO ${i + 1}] "${c.documentTitle}" (${c.sourceName || "Sergio Flórez & Abogados"}${
+              `[DOCUMENTO ${i + 1}] "${c.documentTitle}" (${c.sourceName || "Documento normativo"}${
                 c.pageNumber ? ` · Página ${c.pageNumber}` : ""
               })\n${c.content}`
           )
@@ -112,7 +134,11 @@ export async function POST(request: Request) {
 
       instructions = `${instructions}\n\n${docBlock}`;
     } else {
-      console.log("[labor-ai] RAG: No indexed chunks matched the threshold");
+      console.log("[labor-ai] RAG: No indexed chunks matched the threshold in selected areas");
+    }
+  } else {
+    if (!hasActiveKnowledgeFilters) {
+      console.log("[labor-ai] RAG skipped: No knowledge source filters selected by user.");
     }
   }
 

@@ -42,11 +42,17 @@ function toHistory(messages: ChatMessage[]): LaborAiTurn[] {
   return turns;
 }
 
-async function requestAnswer(question: string, history: LaborAiTurn[], includeOrgContext: boolean, signal: AbortSignal) {
+async function requestAnswer(
+  question: string,
+  history: LaborAiTurn[],
+  includeOrgContext: boolean,
+  knowledgeAreas: KnowledgeAreaId[],
+  signal: AbortSignal
+) {
   const res = await fetch("/api/labor-ai", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, history, includeOrgContext }),
+    body: JSON.stringify({ question, history, includeOrgContext, knowledgeAreas }),
     signal,
   });
   const data = (await res.json().catch(() => null)) as LaborAiResponse | null;
@@ -88,7 +94,10 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [enabledAreas, setEnabledAreas] = useState(() => new Set(areas.map((a) => a.id)));
+  // Default to enabled and ON ONLY for areas that actually have at least 1 indexed document
+  const [enabledAreas, setEnabledAreas] = useState<Set<KnowledgeAreaId>>(() => {
+    return new Set(areas.filter((a) => a.documents > 0).map((a) => a.id));
+  });
   const [useOrgData, setUseOrgData] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<AbortController | null>(null);
@@ -120,7 +129,10 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
     requestRef.current = controller;
     let update: Pick<ChatMessage, "content" | "status" | "dataUsed" | "sampleSize" | "sources">;
     try {
-      const res = await requestAnswer(q, toHistory(base), useOrgData, controller.signal);
+      const activeAreas = Array.from(enabledAreas).filter((id) =>
+        areas.some((a) => a.id === id && a.documents > 0)
+      );
+      const res = await requestAnswer(q, toHistory(base), useOrgData, activeAreas, controller.signal);
       update = {
         content: res.answer,
         dataUsed: res.dataUsed,
@@ -272,9 +284,9 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
                 <button type="button" className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" aria-label="Adjuntar">
                   <Paperclip className="h-4 w-4" />
                 </button>
-                <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                  <Clock3 className="h-3 w-3" />
-                  Base documental especializada: próxima integración
+                <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                  <BookOpen className="h-3 w-3 text-indigo-500" />
+                  RAG: {Array.from(enabledAreas).filter((id) => areas.some((a) => a.id === id && a.documents > 0)).length} de {areas.filter((a) => a.documents > 0).length} fuentes activas
                 </span>
               </div>
               <button
@@ -296,38 +308,79 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
             <Sparkles className="h-4 w-4 text-indigo-500" />
             Fuentes de conocimiento
           </div>
-          <p className="mt-1 text-[12.5px] text-slate-500">Áreas de la base documental especializada. Su conexión con las respuestas está prevista para la próxima integración.</p>
+          <p className="mt-1 text-[12px] text-slate-500">
+            Selecciona las fuentes que NEXA puede consultar para responder.
+          </p>
           <div className="mt-4 space-y-2">
             {areas.map((a) => {
-              const Icon = AREA_ICONS[a.id];
-              const on = enabledAreas.has(a.id);
+              const Icon = AREA_ICONS[a.id] || Scale;
+              const hasDocs = a.documents > 0;
+              const on = hasDocs && enabledAreas.has(a.id);
+
               return (
                 <button
                   key={a.id}
-                  onClick={() =>
+                  type="button"
+                  disabled={!hasDocs}
+                  onClick={() => {
+                    if (!hasDocs) return;
                     setEnabledAreas((prev) => {
                       const next = new Set(prev);
                       if (next.has(a.id)) next.delete(a.id);
                       else next.add(a.id);
                       return next;
-                    })
-                  }
-                  className={cn("flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition", on ? "border-slate-200 bg-white" : "border-dashed border-slate-200 bg-slate-50/50 opacity-60")}
+                    });
+                  }}
+                  aria-pressed={on}
+                  aria-disabled={!hasDocs}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition",
+                    !hasDocs
+                      ? "cursor-not-allowed border-dashed border-slate-200 bg-slate-50/50 opacity-55"
+                      : on
+                      ? "border-slate-200 bg-white hover:border-indigo-200 shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
+                      : "border-slate-200 bg-slate-50/70 opacity-70 hover:opacity-100"
+                  )}
                 >
                   <span
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                      !on ? "bg-slate-100 text-slate-400" : a.id === "sergio-flores" ? "bg-violet-50 text-violet-600" : "bg-indigo-50 text-indigo-600",
+                      !hasDocs
+                        ? "bg-slate-100 text-slate-400"
+                        : !on
+                        ? "bg-slate-100 text-slate-400"
+                        : a.id === "sergio-flores"
+                        ? "bg-violet-50 text-violet-600"
+                        : "bg-indigo-50 text-indigo-600"
                     )}
                   >
                     <Icon className="h-4 w-4" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] leading-snug font-medium text-slate-800">{a.name}</span>
-                    <span className="block text-[11.5px] text-slate-400">{a.documents} documentos</span>
+                    <span
+                      className={cn(
+                        "block text-[13px] leading-snug font-medium",
+                        hasDocs ? "text-slate-800" : "text-slate-500"
+                      )}
+                    >
+                      {a.name}
+                    </span>
+                    <span className="block text-[11.5px] text-slate-400">
+                      {a.documents} {a.documents === 1 ? "documento" : "documentos"}
+                    </span>
                   </span>
-                  <span className={cn("relative h-5 w-9 shrink-0 rounded-full transition", on ? "bg-indigo-600" : "bg-slate-300")}>
-                    <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all", on ? "left-[18px]" : "left-0.5")} />
+                  <span
+                    className={cn(
+                      "relative h-5 w-9 shrink-0 rounded-full transition-colors",
+                      !hasDocs ? "bg-slate-200" : on ? "bg-indigo-600" : "bg-slate-300"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all",
+                        on ? "left-[18px]" : "left-0.5"
+                      )}
+                    />
                   </span>
                 </button>
               );

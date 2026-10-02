@@ -23,6 +23,15 @@ function mapKnowledgeAreaToUi(area: string): KnowledgeAreaId {
   return "other";
 }
 
+export function normalizeKnowledgeArea(area: string): string {
+  const norm = area.toLowerCase().trim().replace(/_/g, "-");
+  if (norm.includes("labor") || norm === "labor-law") return "labor-law";
+  if (norm.includes("social") || norm === "social-security") return "social-security";
+  if (norm.includes("osh") || norm.includes("sst")) return "osh";
+  if (norm.includes("sergio") || norm.includes("flores") || norm.includes("flórez")) return "sergio-flores";
+  return norm;
+}
+
 /**
  * Searches indexed knowledge chunks using vector cosine similarity.
  * Returns empty array if no matches found or if database vector tables are not yet initialized.
@@ -33,35 +42,96 @@ export async function searchKnowledgeChunks(
     matchThreshold?: number;
     matchCount?: number;
     filterKnowledgeArea?: string;
+    filterKnowledgeAreas?: string[];
   } = {}
 ): Promise<RetrievedChunk[]> {
   const threshold = options.matchThreshold ?? 0.35;
   const count = options.matchCount ?? 4;
 
+  // Determine target areas
+  let targetAreas: string[] | null = null;
+  if (options.filterKnowledgeAreas) {
+    targetAreas = Array.from(
+      new Set(options.filterKnowledgeAreas.map(normalizeKnowledgeArea).filter(Boolean))
+    );
+    if (targetAreas.length === 0) {
+      // User explicitly filtered to empty set of areas -> return empty
+      return [];
+    }
+  } else if (options.filterKnowledgeArea) {
+    targetAreas = [normalizeKnowledgeArea(options.filterKnowledgeArea)];
+  }
+
   try {
     const embedding = await getQueryEmbedding(query);
     const supabase = getSupabaseServerClient();
 
-    const { data, error } = await supabase.rpc("match_knowledge_chunks", {
-      query_embedding: embedding,
-      match_threshold: threshold,
-      match_count: count,
-      filter_knowledge_area: options.filterKnowledgeArea || null,
-    });
+    let rows: any[] = [];
 
-    if (error) {
-      console.warn("[knowledge/retrieval] RPC match_knowledge_chunks error:", error.message);
-      return [];
+    if (!targetAreas || targetAreas.length === 0) {
+      // No area filter applied
+      const { data, error } = await supabase.rpc("match_knowledge_chunks", {
+        query_embedding: embedding,
+        match_threshold: threshold,
+        match_count: count,
+        filter_knowledge_area: null,
+      });
+      if (error) {
+        console.warn("[knowledge/retrieval] RPC match_knowledge_chunks error:", error.message);
+        return [];
+      }
+      rows = Array.isArray(data) ? data : [];
+    } else if (targetAreas.length === 1) {
+      // Exactly 1 area
+      const { data, error } = await supabase.rpc("match_knowledge_chunks", {
+        query_embedding: embedding,
+        match_threshold: threshold,
+        match_count: count,
+        filter_knowledge_area: targetAreas[0],
+      });
+      if (error) {
+        console.warn("[knowledge/retrieval] RPC match_knowledge_chunks error:", error.message);
+        return [];
+      }
+      rows = Array.isArray(data) ? data : [];
+    } else {
+      // Multiple areas selected (e.g. LABOR_LAW and SERGIO_FLORES)
+      const areaQueries = await Promise.all(
+        targetAreas.map((area) =>
+          supabase.rpc("match_knowledge_chunks", {
+            query_embedding: embedding,
+            match_threshold: threshold,
+            match_count: count,
+            filter_knowledge_area: area,
+          })
+        )
+      );
+
+      const combined: any[] = [];
+      const seenIds = new Set<string>();
+
+      for (const res of areaQueries) {
+        if (res.data && Array.isArray(res.data)) {
+          for (const row of res.data) {
+            if (!seenIds.has(row.id)) {
+              seenIds.add(row.id);
+              combined.push(row);
+            }
+          }
+        }
+      }
+
+      // Sort by similarity descending and pick top `count`
+      combined.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
+      rows = combined.slice(0, count);
     }
 
-    if (!data || !Array.isArray(data)) return [];
-
-    return data.map((row: any) => ({
+    return rows.map((row: any) => ({
       id: row.id,
       documentId: row.document_id,
       documentTitle: row.document_title || "Documento sin título",
       knowledgeArea: row.knowledge_area || "labor-law",
-      sourceName: row.source_name || "Sergio Flórez & Abogados",
+      sourceName: row.source_name || "Documento normativo",
       content: row.content,
       pageNumber: row.page_number ?? null,
       chunkIndex: row.chunk_index ?? 0,

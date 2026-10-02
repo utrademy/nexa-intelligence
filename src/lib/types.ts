@@ -229,6 +229,7 @@ export interface LaborAiRequest {
   question: string;
   history?: LaborAiTurn[];
   includeOrgContext?: boolean;
+  knowledgeAreas?: (KnowledgeAreaId | string)[];
 }
 
 export type LaborAiResponse =
