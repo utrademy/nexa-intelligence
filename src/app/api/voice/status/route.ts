@@ -18,6 +18,7 @@ export async function GET(request: Request) {
     // 2. Also check if Supabase has recorded the completion interaction
     let dbUpdated = false;
     let newScore: number | undefined;
+    let fieldsUpdated: string[] | undefined;
 
     if (personId) {
       const supabase = getSupabaseServerClient();
@@ -34,6 +35,7 @@ export async function GET(request: Request) {
         dbUpdated = true;
         const struct = interaction.structured_data as any;
         newScore = struct?.new_score;
+        fieldsUpdated = struct?.fields_updated;
       }
     }
 
@@ -43,6 +45,7 @@ export async function GET(request: Request) {
       completed: statusData.completed || dbUpdated,
       dbUpdated,
       newScore,
+      fieldsUpdated,
       error: statusData.error,
     });
   } catch (err: any) {

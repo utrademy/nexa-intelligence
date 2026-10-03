@@ -1,11 +1,28 @@
 export interface NormalizedCallResult {
   personId: string;
   consentToContinue: boolean;
+  // Laboral
   employmentStatus?: string;
   occupation?: string;
-  educationLevel?: string;
-  municipality?: string;
+  sector?: string;
+  contract?: string;
+  income?: string;
+  // Hogar
   householdSize?: number | string;
+  dependents?: number | string;
+  housing?: string;
+  stratum?: number | string;
+  // Educación
+  educationLevel?: string;
+  studyField?: string;
+  // Inclusión / Ubicación
+  municipality?: string;
+  residence?: string;
+  headOfHousehold?: string;
+  // Financiero / Social
+  savings?: string;
+  goals?: string;
+  preferredChannel?: string;
   additionalField?: string;
   source: "AI_VOICE";
   providerCallId: string;
@@ -81,7 +98,8 @@ export const VOICE_CONFIG = {
  * Characterization assistant system prompt in Colombian Spanish.
  * Instructs the voice AI to introduce the call warmly on behalf of Financiera Comultrasan
  * (empresa afiliada a Sergio Flores y abogados), speak with a warm, natural and paused Colombian accent,
- * ask if the person has a brief moment, and collect the 5 characterization fields.
+ * ask if the person has a brief moment, and collect comprehensive characterization fields across
+ * household, employment, education, financial and location dimensions.
  */
 export const CHARACTERIZATION_ASSISTANT_SYSTEM_PROMPT = `Eres la asistente virtual de NEXA para Financiera Comultrasan, empresa afiliada a Sergio Flores y abogados en Colombia.
 
@@ -96,23 +114,39 @@ Debes iniciar presentándote:
 - Si el usuario dice que no tiene tiempo o dice que NO, responde con mucha amabilidad: "Comprendo perfectamente, muchas gracias por atendernos. Que tenga un feliz día." y finalizas la llamada.
 - Si el usuario dice que SÍ, responde: "Muchísimas gracias por su tiempo, es muy breve." y continúas con las preguntas.
 
-PASO 2: PREGUNTAS (UNA POR UNA, PAUSADAS)
-Haz exactamente UNA pregunta a la vez, esperando calmadamente la respuesta:
-1. Situación laboral: "¿Cuál es actualmente su situación laboral? Por ejemplo: si es empleado, independiente, pensionado o desempleado."
-2. Ocupación u oficio: "¿Y a qué actividad u ocupación principal se dedica en este momento?"
-3. Nivel educativo: "¿Cuál ha sido su nivel educativo más alto alcanzado? Por ejemplo: secundaria, técnico, tecnólogo, profesional o posgrado."
-4. Municipio de residencia: "¿En qué municipio o ciudad reside actualmente?"
-5. Personas en el hogar: "Y por último, ¿cuántas personas conforman su hogar incluyéndose usted?"
+PASO 2: PREGUNTAS (UNA POR UNA, PAUSADAS Y CONVERSACIONALES)
+Haz exactamente UNA pregunta a la vez, esperando calmadamente la respuesta completa del usuario:
+
+1. Ubicación y vivienda:
+"¿En qué municipio o ciudad reside actualmente, y su vivienda es propia o en arriendo?"
+(Permite obtener municipio, zona y tipo de vivienda).
+
+2. Hogar y personas a cargo:
+"¿Cuántas personas conforman su hogar incluyéndose usted, y cuántas de ellas dependen económicamente de usted?"
+(Permite registrar tamaño del hogar, personas a cargo, estrato o jefatura).
+
+3. Ocupación y actividad laboral:
+"¿Cuál es actualmente su situación laboral y a qué actividad u ocupación principal se dedica?"
+(Ejemplo: empleado, independiente, comerciante, etc.).
+
+4. Nivel educativo:
+"¿Cuál ha sido su nivel educativo más alto alcanzado y en qué área de estudio o disciplina?"
+(Ejemplo: secundaria, técnico, profesional, ingeniería, administración, etc.).
+
+5. Ingresos y ahorro:
+"Para orientarle mejores beneficios, ¿en qué rango aproximado están sus ingresos mensuales y tiene capacidad de ahorro o alguna meta financiera que desee cumplir este año?"
+(Ejemplo: 1 a 2 salarios mínimos, ahorro para vivienda o educación, etc.).
 
 REGLAS CRÍTICAS:
-- Habla pausado y espera la respuesta completa del usuario antes de pasar al siguiente punto.
-- Si la persona no escucha bien o duda, repítele con calma y una sonrisa en la voz.
+- Habla pausado y espera la respuesta completa del usuario antes de pasar a la siguiente pregunta.
+- Si la persona responde parcialmente, agradece y continúa amablemente sin interrogarla agresivamente.
 - NO preguntes sobre discapacidad, salud, afiliación política ni temas personales sensibles.
-- NO des asesoría legal ni financiera. Esta llamada es exclusivamente una breve actualización de datos.
+- NO des asesoría legal ni financiera. Esta llamada es exclusivamente una actualización de datos institucionales.
+- Al final de la conversación, utiliza la herramienta saveCharacterizationData con todos los datos que lograste identificar.
 
 PASO 3: CIERRE
 Al responder las preguntas, despídete cordialmente:
-"Muchísimas gracias por su amabilidad y por su tiempo. Hemos terminado con la actualización de sus datos. Que termine de pasar un excelente día."
+"Muchísimas gracias por su amabilidad y por su valioso tiempo. Hemos terminado satisfactoriamente con la actualización de sus datos. Que termine de pasar un excelente día."
 Luego finaliza la llamada.`;
 
 export class VapiVoiceAdapter implements VoiceProviderAdapter {
@@ -211,19 +245,36 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
                       type: "object",
                       properties: {
                         consentToContinue: { type: "boolean", description: "¿Autorizó continuar con la llamada?" },
+                        // Laboral
                         employmentStatus: {
                           type: "string",
                           enum: ["Empleado", "Independiente", "Desempleado", "Pensionado", "Estudiante", "Informal"],
                           description: "Situación laboral",
                         },
-                        occupation: { type: "string", description: "Ocupación o profesión" },
+                        occupation: { type: "string", description: "Ocupación, oficio o profesión principal" },
+                        sector: { type: "string", description: "Sector económico de su actividad" },
+                        contract: { type: "string", description: "Tipo de contrato o vinculación laboral" },
+                        income: { type: "string", description: "Rango de ingresos mensuales aproximado" },
+                        // Hogar
+                        householdSize: { type: "number", description: "Cantidad de personas en el hogar incluyéndose" },
+                        dependents: { type: "number", description: "Número de personas a cargo económicamente" },
+                        housing: { type: "string", description: "Tipo de vivienda (Propia, Arriendo, Familiar)" },
+                        stratum: { type: "string", description: "Estrato socioeconómico (1 a 6)" },
+                        // Educación
                         educationLevel: {
                           type: "string",
                           enum: ["Primaria", "Secundaria", "Técnico", "Tecnólogo", "Profesional", "Posgrado"],
-                          description: "Nivel educativo",
+                          description: "Nivel educativo más alto",
                         },
+                        studyField: { type: "string", description: "Área de estudio, profesión o disciplina" },
+                        // Ubicación e inclusión
                         municipality: { type: "string", description: "Municipio o ciudad de residencia" },
-                        householdSize: { type: "number", description: "Cantidad de personas en el hogar" },
+                        residence: { type: "string", description: "Zona de residencia (Urbana o Rural)" },
+                        headOfHousehold: { type: "string", description: "Jefatura de hogar (Sí / No)" },
+                        // Financiero / Social
+                        savings: { type: "string", description: "Capacidad de ahorro mensual estimada" },
+                        goals: { type: "string", description: "Metas financieras principales (vivienda, educación, negocio, etc.)" },
+                        preferredChannel: { type: "string", description: "Canal preferido de contacto" },
                       },
                       required: ["consentToContinue"],
                     },
@@ -253,9 +304,21 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
                     consentToContinue: { type: "boolean" },
                     employmentStatus: { type: "string" },
                     occupation: { type: "string" },
-                    educationLevel: { type: "string" },
-                    municipality: { type: "string" },
+                    sector: { type: "string" },
+                    contract: { type: "string" },
+                    income: { type: "string" },
                     householdSize: { type: "number" },
+                    dependents: { type: "number" },
+                    housing: { type: "string" },
+                    stratum: { type: "string" },
+                    educationLevel: { type: "string" },
+                    studyField: { type: "string" },
+                    municipality: { type: "string" },
+                    residence: { type: "string" },
+                    headOfHousehold: { type: "string" },
+                    savings: { type: "string" },
+                    goals: { type: "string" },
+                    preferredChannel: { type: "string" },
                   },
                 },
               },
@@ -417,11 +480,28 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
     return {
       personId,
       consentToContinue,
+      // Laboral
       employmentStatus: combined.employmentStatus ? String(combined.employmentStatus) : undefined,
       occupation: combined.occupation ? String(combined.occupation) : undefined,
-      educationLevel: combined.educationLevel ? String(combined.educationLevel) : undefined,
-      municipality: combined.municipality || combined.city ? String(combined.municipality || combined.city) : undefined,
+      sector: combined.sector ? String(combined.sector) : undefined,
+      contract: combined.contract ? String(combined.contract) : undefined,
+      income: combined.income ? String(combined.income) : undefined,
+      // Hogar
       householdSize: combined.householdSize !== undefined ? combined.householdSize : undefined,
+      dependents: combined.dependents !== undefined ? combined.dependents : undefined,
+      housing: combined.housing ? String(combined.housing) : undefined,
+      stratum: combined.stratum !== undefined ? combined.stratum : undefined,
+      // Educación
+      educationLevel: combined.educationLevel ? String(combined.educationLevel) : undefined,
+      studyField: combined.studyField ? String(combined.studyField) : undefined,
+      // Inclusión y ubicación
+      municipality: combined.municipality || combined.city ? String(combined.municipality || combined.city) : undefined,
+      residence: combined.residence ? String(combined.residence) : undefined,
+      headOfHousehold: combined.headOfHousehold ? String(combined.headOfHousehold) : undefined,
+      // Financiero y social
+      savings: combined.savings ? String(combined.savings) : undefined,
+      goals: combined.goals ? String(combined.goals) : undefined,
+      preferredChannel: combined.preferredChannel ? String(combined.preferredChannel) : "Llamada con IA",
       additionalField: combined.additionalField ? String(combined.additionalField) : undefined,
       source: "AI_VOICE",
       providerCallId: call.id || message.callId || payload.callId || `vapi-${Date.now()}`,

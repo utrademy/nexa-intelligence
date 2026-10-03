@@ -70,7 +70,7 @@ export function Person360({ profile }: { profile: PersonProfile }) {
   const [tab, setTab] = useState<TabId>("overview");
 
   const stats = profileScore(sections);
-  const score = aiUpdated ? stats.score : person.characterization;
+  const score = stats.score;
   const animatedScore = useAnimatedNumber(score);
   const criticalMissing = sections.flatMap((s) => s.fields).filter((f) => !f.known && f.critical).length;
 
@@ -80,47 +80,52 @@ export function Person360({ profile }: { profile: PersonProfile }) {
     setAiUpdated(true);
     const timestamp = new Date().toISOString();
 
+    // Map of fields to values collected via the voice call
+    const voiceCollectedValues: Record<string, string> = {
+      // Hogar
+      householdSize: "4 personas",
+      dependents: "2 personas",
+      housing: "Propia",
+      stratum: "Estrato 3",
+      // Laboral
+      employmentStatus: "Independiente",
+      occupation: "Comerciante independiente",
+      sector: "Comercio y servicios",
+      contract: "Prestación de servicios",
+      income: "2 a 4 SMMLV",
+      // Educación
+      educationLevel: "Profesional",
+      studyField: "Administración / Comercio",
+      // Ubicación e Inclusión
+      residence: "Urbana",
+      headOfHousehold: "Sí",
+      // Financiero / Social
+      savings: "10% a 20% mensual",
+      goals: "Fortalecimiento de negocio y vivienda",
+      preferredChannel: "Llamada con IA",
+    };
+
     // Mark sections with voice updates
     setSections((prevSections) =>
-      prevSections.map((sec) => {
-        if (sec.id === "employment") {
-          return {
-            ...sec,
-            fields: sec.fields.map((f) => {
-              if (f.key === "employmentStatus") {
-                return { ...f, known: true, value: f.value !== "Sin información" ? f.value : "Independiente", aiCollected: true, source: "Llamada con IA", updatedAt: timestamp };
-              }
-              if (f.key === "occupation") {
-                return { ...f, known: true, value: f.value !== "Sin información" ? f.value : "Comerciante independiente", aiCollected: true, source: "Llamada con IA", updatedAt: timestamp };
-              }
-              return f;
-            }),
-          };
-        }
-        if (sec.id === "education") {
-          return {
-            ...sec,
-            fields: sec.fields.map((f) => {
-              if (f.key === "educationLevel") {
-                return { ...f, known: true, value: f.value !== "Sin información" ? f.value : "Profesional", aiCollected: true, source: "Llamada con IA", updatedAt: timestamp };
-              }
-              return f;
-            }),
-          };
-        }
-        if (sec.id === "household") {
-          return {
-            ...sec,
-            fields: sec.fields.map((f) => {
-              if (f.key === "householdSize") {
-                return { ...f, known: true, value: "4 personas", aiCollected: true, source: "Llamada con IA", updatedAt: timestamp };
-              }
-              return f;
-            }),
-          };
-        }
-        return sec;
-      }),
+      prevSections.map((sec) => ({
+        ...sec,
+        fields: sec.fields.map((f) => {
+          if (voiceCollectedValues[f.key]) {
+            const finalVal = f.value && f.value !== "Sin información" ? f.value : voiceCollectedValues[f.key];
+            return {
+              ...f,
+              known: true,
+              value: finalVal,
+              aiCollected: true,
+              source: "Llamada con IA",
+              updatedAt: timestamp,
+              confidence: 0.94,
+              consent: "Otorgada",
+            };
+          }
+          return f;
+        }),
+      }))
     );
 
     const voiceInteraction: PersonInteraction = {
@@ -128,7 +133,7 @@ export function Person360({ profile }: { profile: PersonProfile }) {
       date: timestamp,
       channel: "voice",
       title: "Llamada con IA · Caracterización completada",
-      description: `${event.fieldsUpdated.length} campos actualizados (${event.fieldsUpdated.join(", ")}). Autorización de tratamiento de datos otorgada.`,
+      description: `${event.fieldsUpdated.length} campos actualizados (${event.fieldsUpdated.join(", ")}). Autorización de tratamiento de datos otorgada conforme a Ley 1581.`,
       outcome: "Información actualizada",
     };
 

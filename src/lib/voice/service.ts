@@ -128,6 +128,8 @@ export async function persistVoiceCharacterization(
 
   // 5. Update person_attributes (upsert)
   const attributeRows: any[] = [];
+
+  // Hogar
   if (result.householdSize !== undefined && result.householdSize !== null && result.householdSize !== "") {
     const hhSizeStr = typeof result.householdSize === "number" ? `${result.householdSize} personas` : String(result.householdSize);
     attributeRows.push({
@@ -143,6 +145,50 @@ export async function persistVoiceCharacterization(
     fieldsUpdated.push("Personas en el hogar");
   }
 
+  if (result.dependents !== undefined && result.dependents !== null && result.dependents !== "") {
+    const depStr = typeof result.dependents === "number" ? `${result.dependents} personas` : String(result.dependents);
+    attributeRows.push({
+      person_id: result.personId,
+      category: "household",
+      attribute_key: "dependents",
+      attribute_value: depStr,
+      source: "Llamada con IA",
+      confidence: 0.94,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Personas a cargo");
+  }
+
+  if (result.housing) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "household",
+      attribute_key: "housing",
+      attribute_value: result.housing,
+      source: "Llamada con IA",
+      confidence: 0.92,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Tipo de vivienda");
+  }
+
+  if (result.stratum) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "household",
+      attribute_key: "stratum",
+      attribute_value: String(result.stratum),
+      source: "Llamada con IA",
+      confidence: 0.93,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Estrato socioeconómico");
+  }
+
+  // Laboral
   if (result.occupation) {
     attributeRows.push({
       person_id: result.personId,
@@ -156,19 +202,134 @@ export async function persistVoiceCharacterization(
     });
   }
 
-  if (result.additionalField) {
+  if (result.sector) {
     attributeRows.push({
       person_id: result.personId,
-      category: "social",
-      attribute_key: "preferredChannel",
-      attribute_value: "Llamada con IA",
+      category: "employment",
+      attribute_key: "sector",
+      attribute_value: result.sector,
       source: "Llamada con IA",
-      confidence: 0.98,
+      confidence: 0.90,
       verified: true,
       updated_at: result.completedAt,
     });
-    fieldsUpdated.push("Canal de contacto preferido");
+    fieldsUpdated.push("Sector económico");
   }
+
+  if (result.contract) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "employment",
+      attribute_key: "contract",
+      attribute_value: result.contract,
+      source: "Llamada con IA",
+      confidence: 0.91,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Tipo de vinculación");
+  }
+
+  if (result.income) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "employment",
+      attribute_key: "income",
+      attribute_value: result.income,
+      source: "Llamada con IA",
+      confidence: 0.92,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Rango de ingresos");
+  }
+
+  // Educación
+  if (result.studyField) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "education",
+      attribute_key: "studyField",
+      attribute_value: result.studyField,
+      source: "Llamada con IA",
+      confidence: 0.93,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Área de estudio");
+  }
+
+  // Inclusión / Ubicación
+  if (result.residence) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "inclusion",
+      attribute_key: "residence",
+      attribute_value: result.residence,
+      source: "Llamada con IA",
+      confidence: 0.94,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Zona de residencia");
+  }
+
+  if (result.headOfHousehold) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "inclusion",
+      attribute_key: "headOfHousehold",
+      attribute_value: result.headOfHousehold,
+      source: "Llamada con IA",
+      confidence: 0.91,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Jefatura de hogar");
+  }
+
+  // Financiero / Social
+  if (result.savings) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "financial",
+      attribute_key: "savings",
+      attribute_value: result.savings,
+      source: "Llamada con IA",
+      confidence: 0.91,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Capacidad de ahorro");
+  }
+
+  if (result.goals) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "financial",
+      attribute_key: "goals",
+      attribute_value: result.goals,
+      source: "Llamada con IA",
+      confidence: 0.92,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Metas financieras");
+  }
+
+  // Canal preferido
+  const preferredChannelVal = result.preferredChannel || "Llamada con IA";
+  attributeRows.push({
+    person_id: result.personId,
+    category: "social",
+    attribute_key: "preferredChannel",
+    attribute_value: preferredChannelVal,
+    source: "Llamada con IA",
+    confidence: 0.98,
+    verified: true,
+    updated_at: result.completedAt,
+  });
+  fieldsUpdated.push("Canal de contacto preferido");
 
   if (attributeRows.length > 0) {
     await supabase.from("person_attributes").upsert(attributeRows, { onConflict: "person_id, attribute_key" });

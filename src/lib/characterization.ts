@@ -140,6 +140,8 @@ export function calculateCharacterizationFromDb(
         known++;
       } else if (f.key === "email" && person.email && person.email.trim().length > 0) {
         known++;
+      } else if (f.key === "address" && person.city) {
+        known++;
       } else if (f.key === "employmentStatus" && person.employment_status && person.employment_status !== "Sin información") {
         known++;
       } else if (f.key === "occupation" && person.occupation && person.occupation !== "Sin información") {
@@ -147,6 +149,8 @@ export function calculateCharacterizationFromDb(
       } else if (f.key === "educationLevel" && person.education_level && person.education_level !== "Sin información") {
         known++;
       } else if (f.key === "memberSince" && person.member_since) {
+        known++;
+      } else if (f.key === "products") {
         known++;
       } else if (f.key === "residence" && person.city) {
         known++;

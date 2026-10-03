@@ -240,11 +240,17 @@ export function AiCharacterizationCard({
             // Fetch final completion
             setTimeout(() => {
               setVoiceCallStatus("completed");
+              const defaultUpdated = [
+                "Situación laboral", "Ocupación", "Sector económico", "Tipo de vinculación", "Rango de ingresos",
+                "Personas en el hogar", "Personas a cargo", "Tipo de vivienda", "Estrato socioeconómico",
+                "Nivel educativo", "Área de estudio", "Municipio", "Zona de residencia", "Jefatura de hogar",
+                "Capacidad de ahorro", "Metas financieras", "Canal de contacto preferido"
+              ];
               const completedEvt: VoiceCallCompletedEvent = {
                 personId,
                 previousScore: score,
                 newScore: statusData.newScore || Math.min(score + 22, 100),
-                fieldsUpdated: ["Situación laboral", "Ocupación", "Nivel educativo", "Municipio", "Personas en el hogar"],
+                fieldsUpdated: Array.isArray(statusData.fieldsUpdated) && statusData.fieldsUpdated.length > 0 ? statusData.fieldsUpdated : defaultUpdated,
                 consentStatus: "Otorgada",
                 summary: "Llamada con IA · Caracterización completada en vivo",
               };
