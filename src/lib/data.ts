@@ -2,6 +2,7 @@ import * as campaigns from "./mock/campaigns";
 import * as knowledge from "./mock/knowledge";
 import { FILTER_OPTIONS, PEOPLE } from "./mock/people";
 import { buildProfile } from "./mock/profiles";
+import type { Channel } from "./types";
 import { fetchCampaignsFromDb, fetchPeopleFromDb, fetchPersonProfileFromDb } from "./supabase/data-service";
 import { getRealCampaignAnalytics } from "./analytics/campaign-analytics";
 import { getCampaignFeedInteractions, getRealSegmentCount } from "./campaigns/campaign-service";
@@ -19,20 +20,22 @@ export async function getDashboardData() {
 
   let campaignList: typeof campaigns.CAMPAIGNS = campaigns.CAMPAIGNS;
   if (dbCampaigns && dbCampaigns.length > 0) {
-    campaignList = dbCampaigns.map((camp) => ({
-      id: camp.id,
-      name: camp.name,
-      objective: camp.description || "Campaña de caracterización de población con IA.",
-      status: (camp.status as any) || "Activa",
-      audience: camp.audience_count,
-      contacted: camp.contacted_count,
-      responded: camp.responded_count,
-      completed: camp.completed_count,
-      channels: ["voice", "whatsapp", "form"],
-      startDate: camp.created_at.slice(0, 10),
-      endDate: "2026-12-31",
-      owner: "Laura Mantilla",
-    }));
+    campaignList = dbCampaigns
+      .map((camp) => ({
+        id: camp.id,
+        name: camp.name,
+        objective: camp.description || "Campaña de caracterización de población con IA.",
+        status: (camp.status as any) || "Activa",
+        audience: camp.audience_count,
+        contacted: camp.contacted_count,
+        responded: camp.responded_count,
+        completed: camp.completed_count,
+        channels: ["voice", "whatsapp", "form"] as Channel[],
+        startDate: camp.created_at.slice(0, 10),
+        endDate: "2026-12-31",
+        owner: "Laura Mantilla",
+      }))
+      .sort((a, b) => (b.contacted || 0) - (a.contacted || 0));
   }
 
   return {
@@ -128,14 +131,20 @@ export async function getCampaignData() {
       contacted: camp.contacted_count,
       responded: camp.responded_count,
       completed: camp.completed_count,
-      channels: ["voice", "whatsapp", "form"],
+      channels: ["voice", "whatsapp", "form"] as Channel[],
       startDate: camp.created_at.slice(0, 10),
       endDate: "2026-12-31",
       owner: "Laura Mantilla",
     }));
   }
 
-  const primaryCampaign = campaignList[0] || campaigns.FEATURED_CAMPAIGN;
+  // The primary organizational campaign is the main active population campaign
+  const primaryCampaign =
+    campaignList.find((c) => c.id === "c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22") ||
+    campaignList.find((c) => (c.contacted || 0) > 0) ||
+    campaignList[0] ||
+    campaigns.FEATURED_CAMPAIGN;
+
   const mergedInteractions = feedInteractions.length > 0 ? feedInteractions : campaigns.CAMPAIGN_INTERACTIONS;
 
   // Real campaign analytics and presets computed dynamically from live database
@@ -162,8 +171,13 @@ export async function getCampaignData() {
     completed: campaignAnalytics.completed,
   };
 
+  const finalCampaignList = [
+    featuredCampaign,
+    ...campaignList.filter((c) => c.id !== featuredCampaign.id),
+  ];
+
   return {
-    campaigns: campaignList.map((c) => (c.id === featuredCampaign.id ? featuredCampaign : c)),
+    campaigns: finalCampaignList,
     featured: featuredCampaign,
     progress: campaignAnalytics.progress,
     channels: campaignAnalytics.channels,
