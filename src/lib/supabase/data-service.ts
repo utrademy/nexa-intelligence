@@ -50,21 +50,22 @@ export async function fetchPeopleFromDb(): Promise<{ people: Person[]; total: nu
     const supabase = getSupabaseServerClient();
     // Fetch a diverse, representative sample across the population
     // PostgREST limits single queries to 1000 records. We fetch up to 2000 records across different score segments
-    // so that the frontend sample mirrors the true 23,746 distribution (complete, partial, and critical gaps).
-    const [{ data: highData, count }, { data: partialData }, { data: gapData }] = await Promise.all([
+    // and explicitly include records with campaign targets so that all filter options (including campaign status) work smoothly.
+    const [{ data: initialData, count }, { data: partialData }, { data: gapData }] = await Promise.all([
+      // First batch includes all initial people who have campaign targets and rich history
       supabase
         .from("people")
         .select("*, campaign_targets(status)", { count: "exact" })
-        .gte("characterization_score", 85)
-        .order("created_at", { ascending: false })
-        .limit(800),
+        .order("created_at", { ascending: true })
+        .limit(1000),
+      // Second batch includes recent records with high/medium scores
       supabase
         .from("people")
         .select("*, campaign_targets(status)")
         .gte("characterization_score", 50)
-        .lt("characterization_score", 85)
         .order("created_at", { ascending: false })
-        .limit(800),
+        .limit(600),
+      // Third batch guarantees coverage of critical gap profiles (< 50)
       supabase
         .from("people")
         .select("*, campaign_targets(status)")
@@ -73,7 +74,15 @@ export async function fetchPeopleFromDb(): Promise<{ people: Person[]; total: nu
         .limit(400),
     ]);
 
-    const combined = [...(highData || []), ...(partialData || []), ...(gapData || [])];
+    // De-duplicate by person id while preserving order
+    const seen = new Set<string>();
+    const combined: any[] = [];
+    for (const p of [...(initialData || []), ...(partialData || []), ...(gapData || [])]) {
+      if (p && p.id && !seen.has(p.id)) {
+        seen.add(p.id);
+        combined.push(p);
+      }
+    }
 
     if (combined.length === 0) {
       console.warn("[supabase] Failed to fetch people: no records found");

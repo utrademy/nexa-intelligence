@@ -67,10 +67,19 @@ export async function getPeople() {
   const dbData = await fetchPeopleFromDb();
   if (dbData && dbData.people.length > 0) {
     console.log(`[data] Loaded ${dbData.people.length} people from Supabase (Total: ${dbData.total})`);
-    const locations = Array.from(new Set(dbData.people.map((p) => p.city))).filter(Boolean);
+    const getUnique = (arr: (string | undefined | null)[], fallback: readonly string[]) => {
+      const unique = Array.from(new Set(arr.filter((v): v is string => Boolean(v && v.trim()))));
+      return unique.length > 0 ? unique : Array.from(fallback);
+    };
+
     const filterOptions = {
       ...FILTER_OPTIONS,
-      location: locations.length > 0 ? locations : FILTER_OPTIONS.location,
+      location: getUnique(dbData.people.map((p) => p.city), FILTER_OPTIONS.location),
+      employment: getUnique(dbData.people.map((p) => p.employment), FILTER_OPTIONS.employment),
+      education: getUnique(dbData.people.map((p) => p.education), FILTER_OPTIONS.education),
+      profileStatus: getUnique(dbData.people.map((p) => p.profileStatus), FILTER_OPTIONS.profileStatus),
+      inclusion: getUnique(dbData.people.map((p) => p.inclusion), FILTER_OPTIONS.inclusion),
+      campaignStatus: getUnique(dbData.people.map((p) => p.campaignStatus), FILTER_OPTIONS.campaignStatus),
     };
     return {
       people: dbData.people,
