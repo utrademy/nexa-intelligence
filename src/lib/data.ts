@@ -11,7 +11,29 @@ import { getDashboardAnalytics } from "./analytics/dashboard";
 // Connects to Supabase PostgreSQL with real analytics calculations.
 
 export async function getDashboardData() {
-  const analytics = await getDashboardAnalytics();
+  const [analytics, dbCampaigns] = await Promise.all([
+    getDashboardAnalytics(),
+    fetchCampaignsFromDb(),
+  ]);
+
+  let campaignList: typeof campaigns.CAMPAIGNS = campaigns.CAMPAIGNS;
+  if (dbCampaigns && dbCampaigns.length > 0) {
+    campaignList = dbCampaigns.map((camp) => ({
+      id: camp.id,
+      name: camp.name,
+      objective: camp.description || "Campaña de caracterización de población con IA.",
+      status: (camp.status as any) || "Activa",
+      audience: camp.audience_count,
+      contacted: camp.contacted_count,
+      responded: camp.responded_count,
+      completed: camp.completed_count,
+      channels: ["voice", "whatsapp", "form"],
+      startDate: camp.created_at.slice(0, 10),
+      endDate: "2026-12-31",
+      owner: "Laura Mantilla",
+    }));
+  }
+
   return {
     kpis: analytics.kpis,
     coverage: analytics.coverage,
@@ -19,16 +41,24 @@ export async function getDashboardData() {
     age: analytics.age,
     geo: analytics.geo,
     employment: analytics.employment,
+    education: analytics.education,
+    segments: analytics.segments,
+    missingFields: analytics.missingFields,
     completenessDistribution: analytics.completenessDistribution,
     insights: analytics.aiFindings,
     totalProfiles: analytics.totalProfiles,
     contactableProfiles: analytics.contactableProfiles,
     contactablePercentage: analytics.contactablePercentage,
     averageCharacterization: analytics.averageCharacterization,
+    completeProfiles: analytics.completeProfiles,
+    completePercentage: analytics.completePercentage,
+    pendingProfiles: analytics.pendingProfiles,
+    pendingPercentage: analytics.pendingPercentage,
     criticalGapProfiles: analytics.criticalGapProfiles,
+    criticalGapsPercentage: analytics.criticalGapsPercentage,
     profilesUpdatedByAI: analytics.profilesUpdatedByAI,
     santanderPercentage: analytics.santanderPercentage,
-    campaigns: campaigns.CAMPAIGNS,
+    campaigns: campaignList,
   };
 }
 
