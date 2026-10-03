@@ -35,16 +35,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Persona no encontrada" }, { status: 404 });
     }
 
-    // Check if voice credentials are ready
-    if (!VOICE_CONFIG.apiKey || !VOICE_CONFIG.phoneNumberId) {
+    // Check if voice API key is ready
+    if (!VOICE_CONFIG.apiKey) {
       return NextResponse.json(
         {
           error: "MANUAL_ACTION_REQUIRED",
           message:
-            "El proveedor de Voice AI aún requiere configuración de API Key / Número telefónico en las variables de entorno.",
+            "El proveedor de Voice AI aún requiere configuración de VOICE_PROVIDER_API_KEY en las variables de entorno.",
           configured: {
-            apiKey: Boolean(VOICE_CONFIG.apiKey),
-            phoneNumberId: Boolean(VOICE_CONFIG.phoneNumberId),
+            apiKey: false,
+            phoneNumberId: Boolean(VOICE_CONFIG.configuredPhoneNumberId),
           },
         },
         { status: 412 },

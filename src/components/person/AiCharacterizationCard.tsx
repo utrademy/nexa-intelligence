@@ -536,7 +536,7 @@ export function AiCharacterizationCard({
                     CONFIGURACIÓN DEL PROVEEDOR PENDIENTE
                   </div>
                   <p className="mt-1 leading-relaxed">
-                    Se requiere configurar las variables de entorno de telefonía en <code>.env.local</code> y Vercel (<code>VOICE_PROVIDER_API_KEY</code>, <code>VOICE_PROVIDER_PHONE_NUMBER_ID</code>).
+                    Se requiere configurar <code>VOICE_PROVIDER_API_KEY</code> en las variables de entorno de Vercel.
                   </p>
                 </div>
               )}

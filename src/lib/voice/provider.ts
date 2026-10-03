@@ -32,26 +32,36 @@ export interface VoiceProviderAdapter {
   getCallStatus(callId: string): Promise<{ status: string; completed: boolean; error?: string }>;
   verifyWebhook(req: Request, rawBody: string): Promise<boolean>;
   normalizeCallResult(payload: any): NormalizedCallResult | null;
+  getResolvedPhoneNumberId(): Promise<string>;
 }
 
-// Environment keys required for Voice Provider
+// In-memory cache for resolved Vapi phone number ID
+let cachedPhoneNumberId: string | null = null;
+
+// Environment keys & config for Voice Provider
 export const VOICE_CONFIG = {
   get apiKey() {
-    return process.env.VOICE_PROVIDER_API_KEY || process.env.VAPI_API_KEY || "";
+    return (process.env.VOICE_PROVIDER_API_KEY || process.env.VAPI_API_KEY || "").trim();
   },
-  get phoneNumberId() {
+  get configuredPhoneNumberId() {
     return (
       process.env.VOICE_PROVIDER_PHONE_NUMBER_ID ||
-      process.env.VOICE_PROVIDER_PHONE_NUMBER ||
       process.env.VAPI_PHONE_NUMBER_ID ||
       ""
-    );
+    ).trim();
+  },
+  get targetPhoneNumber() {
+    return (
+      process.env.VOICE_PROVIDER_PHONE_NUMBER ||
+      process.env.VAPI_PHONE_NUMBER ||
+      "+15162012565"
+    ).trim();
   },
   get assistantId() {
-    return process.env.VOICE_PROVIDER_ASSISTANT_ID || process.env.VAPI_ASSISTANT_ID || "";
+    return (process.env.VOICE_PROVIDER_ASSISTANT_ID || process.env.VAPI_ASSISTANT_ID || "").trim();
   },
   get webhookSecret() {
-    return process.env.VOICE_WEBHOOK_SECRET || process.env.VAPI_WEBHOOK_SECRET || "";
+    return (process.env.VOICE_WEBHOOK_SECRET || process.env.VAPI_WEBHOOK_SECRET || "").trim();
   },
   get serverBaseUrl() {
     return (
@@ -99,20 +109,75 @@ Luego finaliza la llamada.`;
 export class VapiVoiceAdapter implements VoiceProviderAdapter {
   private apiUrl = "https://api.vapi.ai";
 
+  /**
+   * Resolves the Vapi phone number ID.
+   * If VOICE_PROVIDER_PHONE_NUMBER_ID is set, returns it.
+   * Otherwise, automatically queries Vapi /phone-number API to discover the ID for +15162012565.
+   */
+  async getResolvedPhoneNumberId(): Promise<string> {
+    if (VOICE_CONFIG.configuredPhoneNumberId) {
+      return VOICE_CONFIG.configuredPhoneNumberId;
+    }
+
+    if (cachedPhoneNumberId) {
+      return cachedPhoneNumberId;
+    }
+
+    const apiKey = VOICE_CONFIG.apiKey;
+    if (!apiKey) {
+      throw new Error("VOICE_PROVIDER_API_KEY no está configurada.");
+    }
+
+    try {
+      const res = await fetch(`${this.apiUrl}/phone-number`, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Error consultando números en Vapi (${res.status}): ${errText}`);
+      }
+
+      const numbers = (await res.json()) as any[];
+      if (!Array.isArray(numbers) || numbers.length === 0) {
+        throw new Error("No se encontraron números telefónicos registrados en la cuenta de Vapi.");
+      }
+
+      const target = VOICE_CONFIG.targetPhoneNumber.replace(/[\s-]/g, "");
+      const matched = numbers.find((n) => {
+        const num = (n.number || "").replace(/[\s-]/g, "");
+        return num === target || num.endsWith(target.slice(-10));
+      });
+
+      const chosen = matched || numbers[0];
+      if (!chosen || !chosen.id) {
+        throw new Error(`No se pudo resolver el ID de número en Vapi para ${target}.`);
+      }
+
+      cachedPhoneNumberId = chosen.id;
+      return chosen.id;
+    } catch (err: any) {
+      console.error("[VapiVoiceAdapter] Error resolviendo phoneNumberId:", err);
+      throw err;
+    }
+  }
+
   async startCharacterizationCall(params: VoiceCallInitiateParams): Promise<VoiceCallInitiateResult> {
     const apiKey = VOICE_CONFIG.apiKey;
     if (!apiKey) {
-      throw new Error("VOICE_PROVIDER_API_KEY is not configured.");
+      throw new Error("VOICE_PROVIDER_API_KEY no está configurada.");
     }
 
-    const phoneNumberId = VOICE_CONFIG.phoneNumberId;
+    const phoneNumberId = await this.getResolvedPhoneNumberId();
     if (!phoneNumberId) {
-      throw new Error("VOICE_PROVIDER_PHONE_NUMBER_ID is not configured.");
+      throw new Error("No fue posible resolver el Phone Number ID de Vapi.");
     }
 
     const webhookUrl = `${VOICE_CONFIG.serverBaseUrl.replace(/\/$/, "")}/api/voice/webhook`;
 
-    // Inline assistant config or assistantId
+    // Assistant configuration
     const assistantPayload: any = VOICE_CONFIG.assistantId
       ? { assistantId: VOICE_CONFIG.assistantId }
       : {
@@ -159,7 +224,7 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
             },
             voice: {
               provider: "11labs",
-              voiceId: "sarah", // or default spanish voice
+              voiceId: "sarah",
             },
             transcriber: {
               provider: "deepgram",
@@ -216,7 +281,14 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Voice provider API call failed (${res.status}): ${errText}`);
+      let parsedMessage = errText;
+      try {
+        const json = JSON.parse(errText);
+        parsedMessage = json.message || json.error || errText;
+      } catch {
+        // use raw errText
+      }
+      throw new Error(`Fallo en la llamada del proveedor (${res.status}): ${parsedMessage}`);
     }
 
     const data = await res.json();
@@ -269,9 +341,8 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
 
     // Vapi provides event inside message or root payload
     const message = payload.message || payload;
-    const type = message.type || payload.type;
 
-    // We look for end-of-call-report or status-update
+    // Extract call metadata
     const call = message.call || payload.call || {};
     const metadata = call.metadata || message.metadata || payload.metadata || {};
     const personId = metadata.personId;
