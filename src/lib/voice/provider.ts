@@ -26,6 +26,7 @@ export interface NormalizedCallResult {
   additionalField?: string;
   source: "AI_VOICE";
   providerCallId: string;
+  campaignId?: string;
   completedAt: string;
   transcriptAvailable: boolean;
   transcriptText?: string;
@@ -36,6 +37,7 @@ export interface VoiceCallInitiateParams {
   personId: string;
   destinationPhone: string;
   customerName: string;
+  campaignId?: string;
 }
 
 export interface VoiceCallInitiateResult {
@@ -328,6 +330,7 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
             metadata: {
               personId: params.personId,
               customerName: params.customerName,
+              campaignId: params.campaignId,
               source: "AI_VOICE",
             },
           },
@@ -343,6 +346,7 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
       metadata: {
         personId: params.personId,
         destinationPhone: params.destinationPhone,
+        campaignId: params.campaignId,
       },
     };
 
@@ -505,6 +509,7 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
       additionalField: combined.additionalField ? String(combined.additionalField) : undefined,
       source: "AI_VOICE",
       providerCallId: call.id || message.callId || payload.callId || `vapi-${Date.now()}`,
+      campaignId: metadata.campaignId || undefined,
       completedAt: new Date().toISOString(),
       transcriptAvailable: Boolean(transcript && transcript.length > 0),
       transcriptText: transcript || undefined,

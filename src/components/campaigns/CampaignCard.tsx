@@ -1,3 +1,5 @@
+"use client";
+
 import { CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { ChannelBadge } from "@/components/ui/ChannelBadge";
@@ -6,12 +8,18 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { AiCampaign } from "@/lib/types";
 import { formatDate, formatNumber } from "@/lib/format";
 
-export function CampaignCard({ campaign }: { campaign: AiCampaign }) {
+export function CampaignCard({
+  campaign,
+  onSelect,
+}: {
+  campaign: AiCampaign;
+  onSelect?: (campaign: AiCampaign) => void;
+}) {
   const completion = campaign.audience ? Math.round((campaign.completed / campaign.audience) * 100) : 0;
   return (
-    <Link
-      href="/campaigns"
-      className="group block min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/70 bg-white p-4 transition hover:border-slate-300 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.18)]"
+    <div
+      onClick={() => onSelect?.(campaign)}
+      className="group block min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/70 bg-white p-4 transition hover:border-slate-300 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.18)] cursor-pointer"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -42,6 +50,6 @@ export function CampaignCard({ campaign }: { campaign: AiCampaign }) {
           <span>{formatDate(campaign.startDate)} – {formatDate(campaign.endDate)}</span>
         </span>
       </div>
-    </Link>
+    </div>
   );
 }

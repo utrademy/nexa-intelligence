@@ -359,12 +359,14 @@ export async function persistVoiceCharacterization(
   await supabase.from("interactions").insert({
     organization_id: orgId,
     person_id: result.personId,
+    campaign_id: result.campaignId || null,
     channel: "VOICE",
     direction: "OUTBOUND",
     status: "COMPLETED",
     summary: interactionSummary,
     structured_data: {
       provider_call_id: result.providerCallId,
+      campaign_id: result.campaignId || null,
       consent_status: consentStatus,
       source: "AI_VOICE",
       fields_updated: fieldsUpdated,
@@ -377,6 +379,43 @@ export async function persistVoiceCharacterization(
     },
     ai_generated: true,
   });
+
+  // If tied to a campaign, increment completed_count and update target status
+  if (result.campaignId) {
+    try {
+      const { data: currentCamp } = await supabase
+        .from("campaigns")
+        .select("completed_count, contacted_count")
+        .eq("id", result.campaignId)
+        .maybeSingle();
+
+      if (currentCamp) {
+        await supabase
+          .from("campaigns")
+          .update({
+            completed_count: (currentCamp.completed_count || 0) + 1,
+            contacted_count: (currentCamp.contacted_count || 0) + 1,
+            updated_at: result.completedAt,
+          })
+          .eq("id", result.campaignId);
+      }
+
+      await supabase
+        .from("campaign_targets")
+        .upsert(
+          {
+            campaign_id: result.campaignId,
+            person_id: result.personId,
+            channel: "voice",
+            status: "Completado",
+            updated_at: result.completedAt,
+          },
+          { onConflict: "campaign_id, person_id" },
+        );
+    } catch (campErr) {
+      console.warn("[voice-service] Error updating campaign stats:", campErr);
+    }
+  }
 
   return {
     success: true,

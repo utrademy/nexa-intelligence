@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CircleUser, Megaphone, Pause, Plus } from "lucide-react";
+import { CalendarDays, CircleUser, Megaphone, Pause, PhoneCall, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AreaSeriesChart, BarSeriesChart, ChartLegend, DonutChart, LineSeriesChart } from "@/components/charts/Charts";
@@ -15,6 +15,7 @@ import type { AiCampaign, CampaignInteraction, Channel, InteractionStatus, Kpi }
 import { cn, formatDate, formatNumber, formatTime } from "@/lib/format";
 import { CampaignCard } from "./CampaignCard";
 import { CreateCampaignModal } from "./CreateCampaignModal";
+import { CampaignDetailModal } from "./CampaignDetailModal";
 
 const STATUS_FILTERS: ("Todos" | InteractionStatus)[] = ["Todos", "Completado", "En progreso", "Sin respuesta", "No desea participar", "Requiere revisión"];
 
@@ -37,6 +38,7 @@ export function CampaignsView(props: CampaignsViewProps) {
   const toast = useToast();
   const [campaigns, setCampaigns] = useState(props.campaigns);
   const [createOpen, setCreateOpen] = useState(!!props.initialCreate);
+  const [selectedCampaign, setSelectedCampaign] = useState<AiCampaign | null>(null);
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("Todos");
 
   const kpis: Kpi[] = [
@@ -103,10 +105,15 @@ export function CampaignsView(props: CampaignsViewProps) {
               </div>
             </div>
           </div>
-          <Button variant="secondary" onClick={() => toast.show("Campaña pausada · modo demostración")}>
-            <Pause className="h-4 w-4" />
-            Pausar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => setSelectedCampaign(featured)}>
+              Ver detalle
+            </Button>
+            <Button variant="ai" onClick={() => setSelectedCampaign(featured)}>
+              <PhoneCall className="h-4 w-4" />
+              Modo seguro
+            </Button>
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-4 p-6 md:grid-cols-3 xl:grid-cols-5">
           {kpis.map((k, i) => (
@@ -222,7 +229,7 @@ export function CampaignsView(props: CampaignsViewProps) {
       </div>
 
       <Card className="overflow-hidden">
-        <CardHeader title="Registro de conversaciones" subtitle="Interacciones con IA en vivo · hoy" />
+        <CardHeader title="Registro de conversaciones" subtitle="Interacciones con IA en vivo · Supabase" />
         <div className="scrollbar-thin mt-4 flex gap-1.5 overflow-x-auto px-6 pb-4">
           {STATUS_FILTERS.map((s) => (
             <button
@@ -301,7 +308,7 @@ export function CampaignsView(props: CampaignsViewProps) {
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {campaigns.map((c) => (
             <div key={c.id} className="animate-slide-up">
-              <CampaignCard campaign={c} />
+              <CampaignCard campaign={c} onSelect={(camp) => setSelectedCampaign(camp)} />
             </div>
           ))}
         </div>
@@ -310,10 +317,40 @@ export function CampaignsView(props: CampaignsViewProps) {
       <CreateCampaignModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onLaunch={(c) => setCampaigns((prev) => [c, ...prev])}
+        onLaunch={(c) => {
+          setCampaigns((prev) => [c, ...prev]);
+          setSelectedCampaign(c);
+        }}
         audiencePresets={props.audiencePresets}
         collectableFields={props.collectableFields}
         initialAudience={props.initialAudience}
+      />
+
+      <CampaignDetailModal
+        open={Boolean(selectedCampaign)}
+        onClose={() => setSelectedCampaign(null)}
+        campaign={selectedCampaign}
+        onCampaignUpdated={() => {
+          // refresh campaign list
+          fetch(`/api/campaigns/metrics?campaignId=${selectedCampaign?.id}`)
+            .then((r) => r.json())
+            .then((res) => {
+              if (res?.metrics) {
+                setCampaigns((prev) =>
+                  prev.map((c) =>
+                    c.id === selectedCampaign?.id
+                      ? {
+                          ...c,
+                          completed: res.metrics.completadas,
+                          contacted: res.metrics.intentos,
+                        }
+                      : c,
+                  ),
+                );
+              }
+            })
+            .catch(() => {});
+        }}
       />
       {toast.node}
     </div>

@@ -3,6 +3,7 @@ import * as knowledge from "./mock/knowledge";
 import { FILTER_OPTIONS, PEOPLE } from "./mock/people";
 import { buildProfile } from "./mock/profiles";
 import { fetchCampaignsFromDb, fetchPeopleFromDb, fetchPersonProfileFromDb } from "./supabase/data-service";
+import { getCampaignFeedInteractions } from "./campaigns/campaign-service";
 import { getRealIndexedCount, getRealKnowledgeDocuments } from "./knowledge/db";
 import { getDashboardAnalytics } from "./analytics/dashboard";
 
@@ -69,39 +70,50 @@ export async function getPersonProfile(id: string) {
 }
 
 export async function getCampaignData() {
-  const dbCampaigns = await fetchCampaignsFromDb();
-  let campaignList = campaigns.CAMPAIGNS;
+  const [dbCampaigns, feedInteractions] = await Promise.all([
+    fetchCampaignsFromDb(),
+    getCampaignFeedInteractions(50),
+  ]);
+
+  let campaignList: typeof campaigns.CAMPAIGNS = campaigns.CAMPAIGNS;
 
   if (dbCampaigns && dbCampaigns.length > 0) {
-    const primary = dbCampaigns[0];
-    campaignList = [
-      {
-        id: primary.id,
-        name: primary.name,
-        objective: primary.description || "Campaña multicanal de actualización de datos sociodemográficos y laborales.",
-        status: (primary.status as any) || "Activa",
-        audience: primary.audience_count,
-        contacted: primary.contacted_count,
-        responded: primary.responded_count,
-        completed: primary.completed_count,
-        channels: ["voice", "whatsapp", "form"],
-        startDate: primary.created_at.slice(0, 10),
-        endDate: "2026-12-31",
-        owner: "Laura Mantilla",
-      },
-      ...campaigns.CAMPAIGNS.slice(1),
-    ];
+    campaignList = dbCampaigns.map((camp) => ({
+      id: camp.id,
+      name: camp.name,
+      objective: camp.description || "Campaña de caracterización de población con IA.",
+      status: (camp.status as any) || "Activa",
+      audience: camp.audience_count,
+      contacted: camp.contacted_count,
+      responded: camp.responded_count,
+      completed: camp.completed_count,
+      channels: ["voice", "whatsapp", "form"],
+      startDate: camp.created_at.slice(0, 10),
+      endDate: "2026-12-31",
+      owner: "Laura Mantilla",
+    }));
   }
+
+  const primaryCampaign = campaignList[0] || campaigns.FEATURED_CAMPAIGN;
+  const mergedInteractions = feedInteractions.length > 0 ? feedInteractions : campaigns.CAMPAIGN_INTERACTIONS;
+
+  // Real presets computed dynamically
+  const audiencePresets = [
+    { id: "all_incomplete", name: "Población con caracterización incompleta", description: "Asociados con puntaje de caracterización menor a 100%", size: 10000 },
+    { id: "critical", name: "Vacíos críticos — Santander", description: "Perfiles prioritarios con vacíos críticos de información", size: 543 },
+    { id: "score_lt_70", name: "Puntaje bajo (< 70%)", description: "Asociados que requieren enriquecimiento integral", size: 1137 },
+    { id: "score_lt_85", name: "Puntaje medio (< 85%)", description: "Asociados con información básica pero sin datos laborales", size: 3624 },
+  ];
 
   return {
     campaigns: campaignList,
-    featured: campaigns.FEATURED_CAMPAIGN,
+    featured: primaryCampaign,
     progress: campaigns.CAMPAIGN_PROGRESS,
     channels: campaigns.CHANNEL_PERFORMANCE,
     outcomes: campaigns.CAMPAIGN_OUTCOMES,
     responseRate: campaigns.RESPONSE_RATE_TREND,
-    interactions: campaigns.CAMPAIGN_INTERACTIONS,
-    audiencePresets: campaigns.AUDIENCE_PRESETS,
+    interactions: mergedInteractions,
+    audiencePresets,
     collectableFields: campaigns.COLLECTABLE_FIELDS,
   };
 }

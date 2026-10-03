@@ -5,7 +5,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { personId, destinationPhone, customerName } = body;
+    const { personId, destinationPhone, customerName, campaignId } = body;
 
     if (!personId || !destinationPhone) {
       return NextResponse.json(
@@ -56,12 +56,14 @@ export async function POST(request: Request) {
       personId,
       destinationPhone: cleanPhone,
       customerName: fullName,
+      campaignId: campaignId || undefined,
     });
 
     // Log call initiation
     await supabase.from("interactions").insert({
       organization_id: person.organization_id,
       person_id: person.id,
+      campaign_id: campaignId || null,
       channel: "VOICE",
       direction: "OUTBOUND",
       status: "IN_PROGRESS",
@@ -70,6 +72,7 @@ export async function POST(request: Request) {
         provider_call_id: result.callId,
         provider: result.provider,
         status: result.status,
+        campaign_id: campaignId || null,
         started_at: new Date().toISOString(),
       },
       ai_generated: true,
@@ -79,6 +82,7 @@ export async function POST(request: Request) {
       success: true,
       callId: result.callId,
       status: result.status,
+      campaignId: campaignId || null,
     });
   } catch (err: any) {
     console.error("[api/voice/call] Error initiating call:", err);
