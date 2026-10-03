@@ -382,10 +382,18 @@ export function CampaignDetailModal({
 
       {/* MODAL MODO DEMOSTRACIÓN SEGURO */}
       {demoOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-sm animate-fade-in">
-          <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div 
+          className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              if (pollRef.current) clearInterval(pollRef.current);
+              setDemoOpen(false);
+            }
+          }}
+        >
+          <div className="relative flex max-h-[88vh] sm:max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             {/* MODAL HEADER (FIJO) */}
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4.5">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 sm:px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/30">
                   <PhoneCall className="h-5 w-5" />
@@ -401,14 +409,15 @@ export function CampaignDetailModal({
                   if (pollRef.current) clearInterval(pollRef.current);
                   setDemoOpen(false);
                 }}
-                className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Cerrar modal"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* MODAL BODY (SCROLLABLE) */}
-            <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            <div className="scrollbar-thin flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
               <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-[12px] text-amber-900 flex items-start gap-2.5">
                 <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
                 <div>

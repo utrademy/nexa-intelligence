@@ -443,10 +443,18 @@ export function AiCharacterizationCard({
 
       {/* MODAL DE LLAMADA DE VOZ REAL CON IA */}
       {isVoiceModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-sm animate-fade-in">
-          <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-sm animate-fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+              setIsVoiceModalOpen(false);
+            }
+          }}
+        >
+          <div className="relative flex max-h-[88vh] sm:max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             {/* MODAL HEADER (FIJO) */}
-            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4.5">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 sm:px-6 py-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/30">
                   <PhoneCall className="h-5 w-5" />
@@ -462,14 +470,15 @@ export function AiCharacterizationCard({
                   if (pollTimerRef.current) clearInterval(pollTimerRef.current);
                   setIsVoiceModalOpen(false);
                 }}
-                className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                aria-label="Cerrar modal"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* MODAL BODY (SCROLLABLE) */}
-            <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4 space-y-4">
+            <div className="scrollbar-thin flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
               <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 text-[13px]">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500">Canal:</span>
