@@ -92,6 +92,9 @@ export interface PersonInteraction {
   title: string;
   description: string;
   outcome: "Completada" | "Sin respuesta" | "En progreso" | "Información actualizada";
+  fieldsUpdated?: string[];
+  consentStatus?: "Otorgada" | "Denegada";
+  transcriptSnippet?: string;
 }
 
 export interface PersonDocument {

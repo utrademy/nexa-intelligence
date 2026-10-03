@@ -1,4 +1,5 @@
 import { getSupabaseServerClient } from "./server";
+import { SECTION_METADATA } from "@/lib/characterization";
 import type { DatabasePerson, DatabasePersonAttribute, DatabaseInteraction, DatabaseConsent, DatabaseCampaign } from "./types";
 import type {
   CampaignStatus,
@@ -71,84 +72,7 @@ export async function fetchPeopleFromDb(): Promise<{ people: Person[]; total: nu
   }
 }
 
-const SECTION_TEMPLATE: { id: ProfileSectionId; label: string; fields: { key: string; label: string; critical?: boolean }[] }[] = [
-  {
-    id: "personal",
-    label: "Datos personales",
-    fields: [
-      { key: "fullName", label: "Nombre completo" },
-      { key: "nationalId", label: "Cédula" },
-      { key: "birthDate", label: "Fecha de nacimiento" },
-      { key: "mobile", label: "Celular", critical: true },
-      { key: "email", label: "Correo electrónico" },
-      { key: "address", label: "Dirección de residencia", critical: true },
-    ],
-  },
-  {
-    id: "household",
-    label: "Hogar",
-    fields: [
-      { key: "marital", label: "Estado civil" },
-      { key: "householdSize", label: "Personas en el hogar", critical: true },
-      { key: "dependents", label: "Personas a cargo", critical: true },
-      { key: "housing", label: "Tipo de vivienda" },
-      { key: "stratum", label: "Estrato socioeconómico" },
-    ],
-  },
-  {
-    id: "employment",
-    label: "Información laboral",
-    fields: [
-      { key: "employmentStatus", label: "Situación laboral", critical: true },
-      { key: "occupation", label: "Ocupación", critical: true },
-      { key: "sector", label: "Sector económico" },
-      { key: "contract", label: "Tipo de vinculación" },
-      { key: "tenure", label: "Antigüedad en la actividad" },
-      { key: "income", label: "Rango de ingresos mensuales", critical: true },
-    ],
-  },
-  {
-    id: "education",
-    label: "Educación",
-    fields: [
-      { key: "educationLevel", label: "Máximo nivel educativo", critical: true },
-      { key: "studyField", label: "Área de estudio" },
-      { key: "studying", label: "Estudia actualmente" },
-      { key: "certifications", label: "Certificaciones" },
-    ],
-  },
-  {
-    id: "financial",
-    label: "Información financiera",
-    fields: [
-      { key: "products", label: "Productos activos" },
-      { key: "savings", label: "Capacidad de ahorro mensual" },
-      { key: "creditHistory", label: "Historial crediticio" },
-      { key: "goals", label: "Metas financieras", critical: true },
-      { key: "memberSince", label: "Asociado(a) desde" },
-    ],
-  },
-  {
-    id: "social",
-    label: "Información social",
-    fields: [
-      { key: "community", label: "Participación comunitaria" },
-      { key: "sisben", label: "Grupo SISBÉN" },
-      { key: "interests", label: "Intereses" },
-      { key: "preferredChannel", label: "Canal de contacto preferido", critical: true },
-    ],
-  },
-  {
-    id: "inclusion",
-    label: "Inclusión",
-    fields: [
-      { key: "disability", label: "Condición de discapacidad", critical: true },
-      { key: "ethnic", label: "Autorreconocimiento étnico" },
-      { key: "headOfHousehold", label: "Jefatura de hogar", critical: true },
-      { key: "residence", label: "Zona de residencia" },
-    ],
-  },
-];
+const SECTION_TEMPLATE = SECTION_METADATA;
 
 export async function fetchPersonProfileFromDb(id: string): Promise<PersonProfile | null> {
   try {
@@ -254,14 +178,21 @@ export async function fetchPersonProfileFromDb(id: string): Promise<PersonProfil
 
     // Interactions
     const interactions: PersonInteraction[] = (intData && intData.length > 0)
-      ? intData.map((it: DatabaseInteraction) => ({
-          id: it.id,
-          date: it.created_at ? it.created_at.slice(0, 10) : "2026-09-01",
-          channel: (it.channel.toLowerCase() as Channel | "branch" | "app") || "branch",
-          title: it.summary || "Interacción registrada",
-          description: it.summary || "Registro de contacto en sistema",
-          outcome: "Completada",
-        }))
+      ? intData.map((it: DatabaseInteraction) => {
+          const struct = (it.structured_data || {}) as Record<string, any>;
+          const isAiUpdated = it.summary?.includes("Caracterización completada") || it.channel === "VOICE";
+          return {
+            id: it.id,
+            date: it.created_at ? it.created_at.slice(0, 10) : "2026-09-01",
+            channel: (it.channel.toLowerCase() as Channel | "branch" | "app") || "branch",
+            title: it.summary || "Interacción registrada",
+            description: it.summary || "Registro de contacto en sistema",
+            outcome: isAiUpdated ? ("Información actualizada" as const) : ("Completada" as const),
+            fieldsUpdated: Array.isArray(struct.fields_updated) ? struct.fields_updated : undefined,
+            consentStatus: struct.consent_status as "Otorgada" | "Denegada" | undefined,
+            transcriptSnippet: typeof struct.transcript_snippet === "string" ? struct.transcript_snippet : undefined,
+          };
+        })
       : [
           {
             id: "i1",

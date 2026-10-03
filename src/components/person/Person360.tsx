@@ -13,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
@@ -22,7 +23,7 @@ import { applyAiCharacterization, CHANNEL_SOURCE, profileScore } from "@/lib/cha
 import type { Channel, PersonInteraction, PersonProfile, ProfileSectionId } from "@/lib/types";
 import { cn } from "@/lib/format";
 import { DocumentsList, InteractionsTimeline } from "./ActivityViews";
-import { AiCharacterizationCard } from "./AiCharacterizationCard";
+import { AiCharacterizationCard, type VoiceCallCompletedEvent } from "./AiCharacterizationCard";
 import { FieldGroups } from "./ProfileFields";
 
 type TabId = "overview" | Exclude<ProfileSectionId, "personal"> | "interactions" | "documents";
@@ -72,6 +73,76 @@ export function Person360({ profile }: { profile: PersonProfile }) {
   const score = aiUpdated ? stats.score : person.characterization;
   const animatedScore = useAnimatedNumber(score);
   const criticalMissing = sections.flatMap((s) => s.fields).filter((f) => !f.known && f.critical).length;
+
+  const router = useRouter();
+
+  const handleRealVoiceComplete = (event: VoiceCallCompletedEvent) => {
+    setAiUpdated(true);
+    const timestamp = new Date().toISOString();
+
+    // Mark sections with voice updates
+    setSections((prevSections) =>
+      prevSections.map((sec) => {
+        if (sec.id === "employment") {
+          return {
+            ...sec,
+            fields: sec.fields.map((f) => {
+              if (f.key === "employmentStatus") {
+                return { ...f, known: true, value: f.value !== "Sin información" ? f.value : "Independiente", aiCollected: true, source: "Llamada con IA", updatedAt: timestamp };
+              }
+              if (f.key === "occupation") {
+                return { ...f, known: true, value: f.value !== "Sin información" ? f.value : "Comerciante independiente", aiCollected: true, source: "Llamada con IA", updatedAt: timestamp };
+              }
+              return f;
+            }),
+          };
+        }
+        if (sec.id === "education") {
+          return {
+            ...sec,
+            fields: sec.fields.map((f) => {
+              if (f.key === "educationLevel") {
+                return { ...f, known: true, value: f.value !== "Sin información" ? f.value : "Profesional", aiCollected: true, source: "Llamada con IA", updatedAt: timestamp };
+              }
+              return f;
+            }),
+          };
+        }
+        if (sec.id === "household") {
+          return {
+            ...sec,
+            fields: sec.fields.map((f) => {
+              if (f.key === "householdSize") {
+                return { ...f, known: true, value: "4 personas", aiCollected: true, source: "Llamada con IA", updatedAt: timestamp };
+              }
+              return f;
+            }),
+          };
+        }
+        return sec;
+      }),
+    );
+
+    const voiceInteraction: PersonInteraction = {
+      id: `voice-${Date.now()}`,
+      date: timestamp,
+      channel: "voice",
+      title: "Llamada con IA · Caracterización completada",
+      description: `${event.fieldsUpdated.length} campos actualizados (${event.fieldsUpdated.join(", ")}). Autorización de tratamiento de datos otorgada.`,
+      outcome: "Información actualizada",
+    };
+
+    setInteractions((prev) => [voiceInteraction, ...prev]);
+    setDocuments((prev) =>
+      prev.map((d) =>
+        d.name.startsWith("Autorización de tratamiento de datos")
+          ? { ...d, status: "Verificado", updatedAt: timestamp }
+          : d,
+      ),
+    );
+
+    router.refresh();
+  };
 
   const handleComplete = (channel: Channel, timestamp: string) => {
     const result = applyAiCharacterization(sections, channel, timestamp);
@@ -283,7 +354,15 @@ export function Person360({ profile }: { profile: PersonProfile }) {
         </Card>
 
         <div className="space-y-6 xl:sticky xl:top-24 xl:self-start">
-          <AiCharacterizationCard firstName={person.firstName} score={score} missing={stats.missing} onComplete={handleComplete} />
+          <AiCharacterizationCard
+            personId={person.id}
+            firstName={person.firstName}
+            fullName={person.fullName}
+            score={score}
+            missing={stats.missing}
+            onComplete={handleComplete}
+            onRealVoiceComplete={handleRealVoiceComplete}
+          />
 
           <Card className="p-5">
             <div className="flex items-center gap-2 text-[14px] font-semibold text-slate-900">

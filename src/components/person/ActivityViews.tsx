@@ -16,8 +16,29 @@ export function InteractionsTimeline({ interactions }: { interactions: PersonInt
               <div className="text-[13.5px] font-semibold text-slate-900">{it.title}</div>
               <StatusBadge status={it.outcome} />
             </div>
-            <p className="mt-0.5 text-[13px] leading-relaxed text-slate-500">{it.description}</p>
-            <div className="mt-1 text-[12px] text-slate-400">{formatDate(it.date)}</div>
+            <p className="mt-0.5 text-[13px] leading-relaxed text-slate-600">{it.description}</p>
+            {it.fieldsUpdated && it.fieldsUpdated.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {it.fieldsUpdated.map((field) => (
+                  <span key={field} className="rounded-md bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-200/60">
+                    + {field}
+                  </span>
+                ))}
+              </div>
+            )}
+            {it.transcriptSnippet && (
+              <div className="mt-2 rounded-lg bg-slate-50 p-2.5 text-[11.5px] text-slate-600 italic border border-slate-200/60">
+                “{it.transcriptSnippet}”
+              </div>
+            )}
+            <div className="mt-1.5 flex items-center gap-3 text-[12px] text-slate-400">
+              <span>{formatDate(it.date)}</span>
+              {it.consentStatus && (
+                <span className={cn("font-medium", it.consentStatus === "Otorgada" ? "text-emerald-600" : "text-amber-600")}>
+                  Consentimiento: {it.consentStatus}
+                </span>
+              )}
+            </div>
           </div>
         </li>
       ))}

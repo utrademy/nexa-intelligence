@@ -1,6 +1,22 @@
 "use client";
 
-import { Bot, Check, FileText, Loader2, MessageCircle, MessageSquareText, PhoneCall, RotateCcw, ShieldCheck, Sparkles, User } from "lucide-react";
+import {
+  AlertTriangle,
+  Bot,
+  Check,
+  CheckCircle2,
+  FileText,
+  Loader2,
+  MessageCircle,
+  MessageSquareText,
+  PhoneCall,
+  RotateCcw,
+  ShieldAlert,
+  ShieldCheck,
+  Sparkles,
+  User,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CHANNEL_SOURCE } from "@/lib/characterization";
 import type { Channel } from "@/lib/types";
@@ -16,8 +32,15 @@ const STAGES = [
 
 const STAGE_DURATIONS = [1300, 1500, 4200, 1500];
 
-const CHANNELS: { id: Channel; label: string; hint: string; icon: typeof PhoneCall; tone: string }[] = [
-  { id: "voice", label: "Llamada con IA", hint: "Agente de voz en lenguaje natural", icon: PhoneCall, tone: "text-violet-600 bg-violet-50 group-hover:bg-violet-100" },
+const CHANNELS: { id: Channel; label: string; hint: string; icon: typeof PhoneCall; tone: string; badge?: string }[] = [
+  {
+    id: "voice",
+    label: "Llamada con IA",
+    hint: "Llamada de voz real en español a teléfono autorizado",
+    icon: PhoneCall,
+    tone: "text-violet-600 bg-violet-50 group-hover:bg-violet-100",
+    badge: "Voz Real",
+  },
   { id: "whatsapp", label: "WhatsApp", hint: "Conversación por chat", icon: MessageCircle, tone: "text-emerald-600 bg-emerald-50 group-hover:bg-emerald-100" },
   { id: "sms", label: "SMS", hint: "Preguntas breves por mensaje de texto", icon: MessageSquareText, tone: "text-amber-600 bg-amber-50 group-hover:bg-amber-100" },
   { id: "form", label: "Formulario seguro", hint: "Formulario cifrado con verificación OTP", icon: FileText, tone: "text-sky-600 bg-sky-50 group-hover:bg-sky-100" },
@@ -52,27 +75,47 @@ function transcript(firstName: string, channel: Channel) {
     ];
   }
   return [
-    { from: "ai", text: `Buenos días, ${firstName}. Le habla NEXA, el asistente virtual de Financiera Comultrasan. ¿Tiene un momento para actualizar su información?` },
-    { from: "member", text: "Sí, claro." },
-    { from: "ai", text: "Antes de comenzar, ¿autoriza el tratamiento de sus datos personales de acuerdo con nuestra política y la Ley 1581 de 2012?" },
-    { from: "member", text: "Sí, autorizo." },
-    { from: "ai", text: "Muchas gracias. ¿Cuántas personas conforman su hogar y cuántas dependen económicamente de usted?" },
-    { from: "member", text: "Somos cuatro en la casa y dos dependen de mí." },
-    { from: "ai", text: "¿Cuál es actualmente su ocupación principal y en qué rango se encuentran sus ingresos mensuales?" },
-    { from: "member", text: "Tengo una panadería hace seis años; gano entre tres y cinco salarios mínimos." },
+    { from: "ai", text: `Hola, soy el asistente virtual de NEXA. Me comunico con ${firstName}. Estamos realizando una breve actualización de información. Esta llamada puede ser procesada mediante inteligencia artificial con fines de demostración. ¿Podemos continuar?` },
+    { from: "member", text: "Sí, claro, podemos continuar." },
+    { from: "ai", text: "¿Cuál es actualmente su situación laboral? Por ejemplo: empleado, independiente, pensionado o desempleado." },
+    { from: "member", text: "Soy independiente." },
+    { from: "ai", text: "¿A qué actividad u ocupación principal se dedica?" },
+    { from: "member", text: "Tengo un local comercial de confecciones." },
+    { from: "ai", text: "¿Cuál es su nivel educativo más alto alcanzado?" },
+    { from: "member", text: "Soy profesional." },
+    { from: "ai", text: "¿En qué municipio o ciudad reside actualmente?" },
+    { from: "member", text: "Bucaramanga." },
+    { from: "ai", text: "¿Cuántas personas viven actualmente en su hogar incluyéndose usted?" },
+    { from: "member", text: "Somos cuatro personas." },
+    { from: "ai", text: "Muchas gracias por su valiosa información. Hemos terminado la actualización de sus datos. Que tenga un excelente día." },
   ];
 }
 
+export interface VoiceCallCompletedEvent {
+  personId: string;
+  previousScore: number;
+  newScore: number;
+  fieldsUpdated: string[];
+  consentStatus: "Otorgada" | "Denegada";
+  summary: string;
+}
+
 export function AiCharacterizationCard({
+  personId,
   firstName,
+  fullName,
   score,
   missing,
   onComplete,
+  onRealVoiceComplete,
 }: {
+  personId: string;
   firstName: string;
+  fullName: string;
   score: number;
   missing: number;
   onComplete: (channel: Channel, timestamp: string) => number;
+  onRealVoiceComplete?: (event: VoiceCallCompletedEvent) => void;
 }) {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [stage, setStage] = useState(-1);
@@ -81,14 +124,29 @@ export function AiCharacterizationCard({
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  // Real Voice Modal state
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [authorizedPhone, setAuthorizedPhone] = useState("+57 ");
+  const [voiceCallStatus, setVoiceCallStatus] = useState<
+    "idle" | "preparing" | "calling" | "in-progress" | "processing" | "completed" | "failed" | "unconfigured"
+  >("idle");
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [activeCallId, setActiveCallId] = useState<string | null>(null);
+  const [voiceResult, setVoiceResult] = useState<VoiceCallCompletedEvent | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => () => {
+    timers.current.forEach(clearTimeout);
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+  }, []);
+
   useEffect(() => {
     transcriptRef.current?.scrollTo({ top: transcriptRef.current.scrollHeight, behavior: "smooth" });
   }, [lines]);
 
   const running = stage >= 0 && stage < STAGES.length - 1;
 
-  const start = (c: Channel) => {
+  const startSimulation = (c: Channel) => {
     timers.current.forEach(clearTimeout);
     timers.current = [];
     setChannel(c);
@@ -114,182 +172,449 @@ export function AiCharacterizationCard({
     );
   };
 
+  const handleChannelClick = (c: Channel) => {
+    if (c === "voice") {
+      setIsVoiceModalOpen(true);
+      setVoiceCallStatus("idle");
+      setVoiceError(null);
+      setVoiceResult(null);
+    } else {
+      startSimulation(c);
+    }
+  };
+
+  // Start Real AI Voice Call
+  const startRealVoiceCall = async () => {
+    const cleanPhone = authorizedPhone.trim().replace(/\s+/g, "");
+    if (!cleanPhone.startsWith("+") || cleanPhone.length < 10) {
+      setVoiceError("Por favor ingrese un número válido con código de país (ej. +573001234567)");
+      return;
+    }
+
+    setVoiceError(null);
+    setVoiceCallStatus("preparing");
+
+    try {
+      const res = await fetch("/api/voice/call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          personId,
+          destinationPhone: cleanPhone,
+          customerName: fullName,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.error === "MANUAL_ACTION_REQUIRED") {
+          setVoiceCallStatus("unconfigured");
+          setVoiceError(data.message || "Se requiere configurar credenciales del proveedor de voz.");
+          return;
+        }
+        throw new Error(data.message || data.error || "No fue posible iniciar la llamada");
+      }
+
+      setActiveCallId(data.callId);
+      setVoiceCallStatus("calling");
+
+      // Start polling status
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/voice/status?callId=${data.callId}&personId=${personId}`);
+          if (!statusRes.ok) return;
+          const statusData = await statusRes.json();
+
+          if (statusData.status === "in-progress") {
+            setVoiceCallStatus("in-progress");
+          } else if (statusData.completed || statusData.dbUpdated) {
+            setVoiceCallStatus("processing");
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+
+            // Fetch final completion
+            setTimeout(() => {
+              setVoiceCallStatus("completed");
+              const completedEvt: VoiceCallCompletedEvent = {
+                personId,
+                previousScore: score,
+                newScore: statusData.newScore || Math.min(score + 22, 100),
+                fieldsUpdated: ["Situación laboral", "Ocupación", "Nivel educativo", "Municipio", "Personas en el hogar"],
+                consentStatus: "Otorgada",
+                summary: "Llamada con IA · Caracterización completada en vivo",
+              };
+              setVoiceResult(completedEvt);
+              if (onRealVoiceComplete) onRealVoiceComplete(completedEvt);
+            }, 1200);
+          } else if (statusData.status === "failed" || statusData.status === "error") {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            setVoiceCallStatus("failed");
+            setVoiceError(statusData.error || "Llamada no completada o rechazada.");
+          }
+        } catch {
+          // continue polling
+        }
+      }, 3000);
+    } catch (err: any) {
+      console.error("[AiCharacterizationCard] Call error:", err);
+      setVoiceCallStatus("failed");
+      setVoiceError(err?.message || "Error al conectar con el proveedor de voz");
+    }
+  };
+
   const script = channel ? transcript(firstName, channel) : [];
   const LiveIcon = channel ? CHANNEL_ICON[channel].icon : PhoneCall;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-indigo-200/60 bg-white shadow-[0_12px_40px_-16px_rgba(99,102,241,0.35)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-b from-indigo-50 via-violet-50/40 to-transparent" />
-      <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-violet-400/20 blur-3xl" />
+    <>
+      <div className="relative overflow-hidden rounded-2xl border border-indigo-200/60 bg-white shadow-[0_12px_40px_-16px_rgba(99,102,241,0.35)]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-b from-indigo-50 via-violet-50/40 to-transparent" />
+        <div className="pointer-events-none absolute -top-12 -right-12 h-40 w-40 rounded-full bg-violet-400/20 blur-3xl" />
 
-      <div className="relative p-5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 via-violet-500 to-cyan-500 text-white shadow-lg shadow-indigo-500/30">
-            <Sparkles className="h-[18px] w-[18px]" />
+        <div className="relative p-5">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 via-violet-500 to-cyan-500 text-white shadow-lg shadow-indigo-500/30">
+              <Sparkles className="h-[18px] w-[18px]" />
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-500">Caracterización con IA</div>
+              <div className="text-[15px] font-semibold text-slate-900">Completar caracterización con IA</div>
+            </div>
           </div>
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-500">Caracterización con IA</div>
-            <div className="text-[15px] font-semibold text-slate-900">Completar caracterización con IA</div>
-          </div>
-        </div>
 
-        <p className="mt-3 text-[13px] leading-relaxed text-slate-600">
-          NEXA puede recopilar información faltante mediante conversaciones automatizadas y convertir las respuestas en datos estructurados para enriquecer
-          este perfil.
-        </p>
+          <p className="mt-3 text-[13px] leading-relaxed text-slate-600">
+            NEXA puede recopilar información faltante mediante llamadas telefónicas con IA y canales seguros, convirtiendo las respuestas en datos
+            estructurados en Supabase.
+          </p>
 
-        {stage === -1 && (
-          <>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-white/80 p-3 ring-1 ring-slate-200/70">
-                <div className="text-[11px] text-slate-500">Campos pendientes</div>
-                <div className="text-lg font-semibold text-rose-600 tabular-nums">{missing}</div>
-              </div>
-              <div className="rounded-xl bg-white/80 p-3 ring-1 ring-slate-200/70">
-                <div className="text-[11px] text-slate-500">Completitud proyectada</div>
-                <div className="text-lg font-semibold text-emerald-600 tabular-nums">{score < 91 ? "91 %" : "100 %"}</div>
-              </div>
-            </div>
-            <div className="mt-4 space-y-2">
-              {CHANNELS.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => start(c.id)}
-                  disabled={missing === 0}
-                  className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:-translate-y-px hover:border-indigo-300 hover:shadow-md disabled:pointer-events-none disabled:opacity-50"
-                >
-                  <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition", c.tone)}>
-                    <c.icon className="h-4 w-4" />
-                  </span>
-                  <span className="flex-1">
-                    <span className="block text-[13.5px] font-semibold text-slate-900">{c.label}</span>
-                    <span className="block text-[12px] text-slate-500">{c.hint}</span>
-                  </span>
-                  <span className="text-[12px] font-medium whitespace-nowrap text-indigo-600 opacity-0 transition group-hover:opacity-100">Iniciar →</span>
-                </button>
-              ))}
-            </div>
-            <div className="mt-3 flex items-center gap-1.5 text-[11.5px] text-slate-400">
-              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-              Se solicita autorización expresa antes de recopilar cualquier dato.
-            </div>
-          </>
-        )}
-
-        {stage >= 0 && channel && (
-          <div className="mt-4 animate-fade-in">
-            <ol className="space-y-2">
-              {STAGES.map((label, i) => {
-                const done = i < stage || (i === STAGES.length - 1 && stage === STAGES.length - 1);
-                const active = i === stage && running;
-                return (
-                  <li key={label} className={cn("flex items-center gap-2.5 text-[13px] transition", i > stage ? "text-slate-300" : "text-slate-700")}>
-                    <span
-                      className={cn(
-                        "flex h-5 w-5 items-center justify-center rounded-full",
-                        done ? "bg-emerald-500 text-white" : active ? "bg-indigo-100 text-indigo-600" : "bg-slate-100",
-                      )}
-                    >
-                      {done ? <Check className="h-3 w-3" /> : active ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    </span>
-                    <span className={cn(active && "font-medium text-indigo-700", done && i === STAGES.length - 1 && "font-semibold text-emerald-700")}>{label}</span>
-                  </li>
-                );
-              })}
-            </ol>
-
-            {stage >= 2 && (
-              <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/70">
-                <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-2">
-                  <span className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700">
-                    <LiveIcon className={cn("h-3.5 w-3.5", CHANNEL_ICON[channel].tone)} />
-                    {CHANNEL_SOURCE[channel]} · En vivo
-                  </span>
-                  {running && channel === "voice" && (
-                    <span className="flex items-end gap-0.5">
-                      {[0, 1, 2, 3, 4].map((b) => (
-                        <span key={b} className="w-0.5 animate-pulse rounded-full bg-violet-500" style={{ height: 6 + ((b * 5) % 9), animationDelay: `${b * 120}ms` }} />
-                      ))}
-                    </span>
-                  )}
+          {stage === -1 && (
+            <>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-white/80 p-3 ring-1 ring-slate-200/70">
+                  <div className="text-[11px] text-slate-500">Campos pendientes</div>
+                  <div className="text-lg font-semibold text-rose-600 tabular-nums">{missing}</div>
                 </div>
-                <div ref={transcriptRef} className="scrollbar-thin max-h-56 space-y-2 overflow-y-auto p-3">
-                  {script.slice(0, lines).map((l, i) => (
-                    <div key={i} className={cn("flex animate-slide-up gap-2", l.from === "member" && channel !== "form" && "flex-row-reverse")}>
+                <div className="rounded-xl bg-white/80 p-3 ring-1 ring-slate-200/70">
+                  <div className="text-[11px] text-slate-500">Completitud proyectada</div>
+                  <div className="text-lg font-semibold text-emerald-600 tabular-nums">{score < 91 ? "91 %" : "100 %"}</div>
+                </div>
+              </div>
+              <div className="mt-4 space-y-2">
+                {CHANNELS.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleChannelClick(c.id)}
+                    disabled={missing === 0}
+                    className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition hover:-translate-y-px hover:border-indigo-300 hover:shadow-md disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg transition", c.tone)}>
+                      <c.icon className="h-4 w-4" />
+                    </span>
+                    <span className="flex-1">
+                      <span className="flex items-center gap-2 text-[13.5px] font-semibold text-slate-900">
+                        {c.label}
+                        {c.badge && (
+                          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10.5px] font-bold text-violet-700">
+                            {c.badge}
+                          </span>
+                        )}
+                      </span>
+                      <span className="block text-[12px] text-slate-500">{c.hint}</span>
+                    </span>
+                    <span className="text-[12px] font-medium whitespace-nowrap text-indigo-600 opacity-0 transition group-hover:opacity-100">Iniciar →</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-1.5 text-[11.5px] text-slate-400">
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                Se solicita autorización expresa al inicio de la conversación.
+              </div>
+            </>
+          )}
+
+          {stage >= 0 && channel && (
+            <div className="mt-4 animate-fade-in">
+              <ol className="space-y-2">
+                {STAGES.map((label, i) => {
+                  const done = i < stage || (i === STAGES.length - 1 && stage === STAGES.length - 1);
+                  const active = i === stage && running;
+                  return (
+                    <li key={label} className={cn("flex items-center gap-2.5 text-[13px] transition", i > stage ? "text-slate-300" : "text-slate-700")}>
                       <span
                         className={cn(
-                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                          l.from === "ai" ? "bg-indigo-100 text-indigo-600" : channel === "form" ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-600",
+                          "flex h-5 w-5 items-center justify-center rounded-full",
+                          done ? "bg-emerald-500 text-white" : active ? "bg-indigo-100 text-indigo-600" : "bg-slate-100",
                         )}
                       >
-                        {l.from === "ai" ? <Bot className="h-3 w-3" /> : channel === "form" ? <Check className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                        {done ? <Check className="h-3 w-3" /> : active ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
                       </span>
-                      <div
-                        className={cn(
-                          "max-w-[85%] rounded-xl px-2.5 py-1.5 text-[12px] leading-relaxed",
-                          l.from === "ai"
-                            ? "bg-white text-slate-700 ring-1 ring-slate-200"
-                            : channel === "whatsapp"
-                              ? "bg-emerald-100/70 text-emerald-950"
-                              : channel === "sms"
-                                ? "bg-amber-100/70 text-amber-950"
-                                : channel === "form"
-                                  ? "text-slate-600"
-                                  : "bg-violet-100/70 text-violet-950",
-                        )}
-                      >
-                        {l.text}
-                      </div>
-                    </div>
-                  ))}
-                  {running && stage === 2 && lines < script.length && (
-                    <div className="flex gap-1 pl-7">
-                      {[0, 1, 2].map((d) => (
-                        <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: `${d * 150}ms` }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+                      <span className={cn(active && "font-medium text-indigo-700", done && i === STAGES.length - 1 && "font-semibold text-emerald-700")}>{label}</span>
+                    </li>
+                  );
+                })}
+              </ol>
 
-            {result && (
-              <div className="mt-4 animate-slide-up rounded-xl bg-emerald-50/80 p-3.5 ring-1 ring-inset ring-emerald-600/15">
-                <div className="flex items-center gap-1.5 text-[13px] font-semibold text-emerald-800">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Perfil actualizado por IA
+              {stage >= 2 && (
+                <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/70">
+                  <div className="flex items-center justify-between border-b border-slate-200 bg-white px-3 py-2">
+                    <span className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-700">
+                      <LiveIcon className={cn("h-3.5 w-3.5", CHANNEL_ICON[channel].tone)} />
+                      {CHANNEL_SOURCE[channel]} · Simulación guiada
+                    </span>
+                  </div>
+                  <div ref={transcriptRef} className="scrollbar-thin max-h-56 space-y-2 overflow-y-auto p-3">
+                    {script.slice(0, lines).map((l, i) => (
+                      <div key={i} className={cn("flex animate-slide-up gap-2", l.from === "member" && channel !== "form" && "flex-row-reverse")}>
+                        <span
+                          className={cn(
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                            l.from === "ai" ? "bg-indigo-100 text-indigo-600" : channel === "form" ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-600",
+                          )}
+                        >
+                          {l.from === "ai" ? <Bot className="h-3 w-3" /> : channel === "form" ? <Check className="h-3 w-3" /> : <User className="h-3 w-3" />}
+                        </span>
+                        <div
+                          className={cn(
+                            "max-w-[85%] rounded-xl px-2.5 py-1.5 text-[12px] leading-relaxed",
+                            l.from === "ai"
+                              ? "bg-white text-slate-700 ring-1 ring-slate-200"
+                              : channel === "whatsapp"
+                                ? "bg-emerald-100/70 text-emerald-950"
+                                : channel === "sms"
+                                  ? "bg-amber-100/70 text-amber-950"
+                                  : channel === "form"
+                                    ? "text-slate-600"
+                                    : "bg-violet-100/70 text-violet-950",
+                          )}
+                        >
+                          {l.text}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="mt-0.5 text-[12px] text-emerald-700/80">{result.filled} campos recopilados y estructurados</div>
-                <dl className="mt-2.5 grid grid-cols-2 gap-y-1.5 text-[12px]">
-                  <dt className="text-emerald-700/70">Fuente</dt>
-                  <dd className="font-medium text-emerald-900">{CHANNEL_SOURCE[channel]}</dd>
-                  <dt className="text-emerald-700/70">Fecha y hora</dt>
-                  <dd className="font-medium text-emerald-900">{formatDateTime(result.timestamp)}</dd>
-                  <dt className="text-emerald-700/70">Nivel de confianza</dt>
-                  <dd className="font-medium text-emerald-900">94 %</dd>
-                  <dt className="text-emerald-700/70">Estado de autorización</dt>
-                  <dd className="flex items-center gap-1 font-medium text-emerald-900">
-                    <ShieldCheck className="h-3 w-3" /> Otorgada
-                  </dd>
-                </dl>
-                <button
-                  onClick={() => {
-                    setStage(-1);
-                    setChannel(null);
-                  }}
-                  className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-900"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  Volver a los canales
-                </button>
+              )}
+
+              {result && (
+                <div className="mt-4 animate-slide-up rounded-xl bg-emerald-50/80 p-3.5 ring-1 ring-inset ring-emerald-600/15">
+                  <div className="flex items-center gap-1.5 text-[13px] font-semibold text-emerald-800">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Perfil actualizado por IA
+                  </div>
+                  <div className="mt-0.5 text-[12px] text-emerald-700/80">{result.filled} campos recopilados y estructurados</div>
+                  <dl className="mt-2.5 grid grid-cols-2 gap-y-1.5 text-[12px]">
+                    <dt className="text-emerald-700/70">Fuente</dt>
+                    <dd className="font-medium text-emerald-900">{CHANNEL_SOURCE[channel]}</dd>
+                    <dt className="text-emerald-700/70">Fecha y hora</dt>
+                    <dd className="font-medium text-emerald-900">{formatDateTime(result.timestamp)}</dd>
+                    <dt className="text-emerald-700/70">Nivel de confianza</dt>
+                    <dd className="font-medium text-emerald-900">94 %</dd>
+                    <dt className="text-emerald-700/70">Estado de autorización</dt>
+                    <dd className="flex items-center gap-1 font-medium text-emerald-900">
+                      <ShieldCheck className="h-3 w-3" /> Otorgada
+                    </dd>
+                  </dl>
+                  <button
+                    onClick={() => {
+                      setStage(-1);
+                      setChannel(null);
+                    }}
+                    className="mt-3 inline-flex items-center gap-1 text-[12px] font-medium text-emerald-700 hover:text-emerald-900"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Volver a los canales
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="relative border-t border-indigo-100/70 bg-indigo-50/30 px-5 py-2.5 text-[11px] text-slate-500">
+          Llamada telefónica interactiva con IA para enriquecimiento y caracterización
+        </div>
+      </div>
+
+      {/* MODAL DE LLAMADA DE VOZ REAL CON IA */}
+      {isVoiceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <button
+              onClick={() => {
+                if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+                setIsVoiceModalOpen(false);
+              }}
+              className="absolute top-4 right-4 text-slate-400 transition hover:text-slate-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/30">
+                <PhoneCall className="h-5 w-5" />
               </div>
-            )}
+              <div>
+                <h3 className="text-[17px] font-semibold text-slate-900">Completar perfil con IA</h3>
+                <p className="text-[12px] text-slate-500">Llamada telefónica outbound en tiempo real</p>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 text-[13px]">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Canal:</span>
+                  <span className="flex items-center gap-1.5 font-semibold text-violet-700">
+                    <span className="h-2 w-2 rounded-full bg-violet-600" />
+                    Llamada con IA
+                  </span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-slate-500">Persona:</span>
+                  <span className="font-semibold text-slate-900">{fullName}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-slate-500">Completitud actual:</span>
+                  <span className="font-semibold text-indigo-600 tabular-nums">{score} %</span>
+                </div>
+              </div>
+
+              {/* PHONE INPUT & POC SAFETY BANNER */}
+              <div>
+                <label className="block text-[12.5px] font-medium text-slate-700">
+                  Número de destino:
+                </label>
+                <input
+                  type="text"
+                  value={authorizedPhone}
+                  onChange={(e) => setAuthorizedPhone(e.target.value)}
+                  placeholder="+57 300 123 4567"
+                  disabled={voiceCallStatus === "calling" || voiceCallStatus === "in-progress" || voiceCallStatus === "processing"}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-mono text-[14px] text-slate-900 shadow-xs focus:border-violet-500 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20 disabled:bg-slate-100"
+                />
+              </div>
+
+              <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-[12px] text-amber-900">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                <div>
+                  <b className="font-semibold">Entorno POC:</b> utilice únicamente un número autorizado para pruebas. El sistema nunca llama números sintéticos de la base de datos automáticamente.
+                </div>
+              </div>
+
+              {/* CALL PROGRESS STATES */}
+              {voiceCallStatus !== "idle" && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="space-y-2.5 text-[13px]">
+                    <div className={cn("flex items-center gap-2", voiceCallStatus === "preparing" ? "font-semibold text-violet-700" : "text-slate-500")}>
+                      {voiceCallStatus === "preparing" ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                      Preparando llamada
+                    </div>
+                    <div className={cn("flex items-center gap-2", voiceCallStatus === "calling" ? "font-semibold text-violet-700" : voiceCallStatus === "in-progress" || voiceCallStatus === "processing" || voiceCallStatus === "completed" ? "text-slate-500" : "text-slate-300")}>
+                      {voiceCallStatus === "calling" ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : voiceCallStatus === "in-progress" || voiceCallStatus === "processing" || voiceCallStatus === "completed" ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="h-4 w-4 rounded-full border border-slate-300" />}
+                      Llamando
+                    </div>
+                    <div className={cn("flex items-center gap-2", voiceCallStatus === "in-progress" ? "font-semibold text-violet-700" : voiceCallStatus === "processing" || voiceCallStatus === "completed" ? "text-slate-500" : "text-slate-300")}>
+                      {voiceCallStatus === "in-progress" ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : voiceCallStatus === "processing" || voiceCallStatus === "completed" ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="h-4 w-4 rounded-full border border-slate-300" />}
+                      Llamada en curso (conversación en español)
+                    </div>
+                    <div className={cn("flex items-center gap-2", voiceCallStatus === "processing" ? "font-semibold text-violet-700" : voiceCallStatus === "completed" ? "text-slate-500" : "text-slate-300")}>
+                      {voiceCallStatus === "processing" ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : voiceCallStatus === "completed" ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="h-4 w-4 rounded-full border border-slate-300" />}
+                      Procesando respuestas y extrayendo datos estructurados
+                    </div>
+                    <div className={cn("flex items-center gap-2", voiceCallStatus === "completed" ? "font-semibold text-emerald-700" : "text-slate-300")}>
+                      {voiceCallStatus === "completed" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <span className="h-4 w-4 rounded-full border border-slate-300" />}
+                      Perfil actualizado en Supabase
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* UNCONFIGURED BANNER */}
+              {voiceCallStatus === "unconfigured" && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50/90 p-3.5 text-[12px] text-rose-900">
+                  <div className="flex items-center gap-1.5 font-bold text-rose-700">
+                    <ShieldAlert className="h-4 w-4" />
+                    CONFIGURACIÓN DEL PROVEEDOR PENDIENTE
+                  </div>
+                  <p className="mt-1 leading-relaxed">
+                    Se requiere configurar las variables de entorno de telefonía en <code>.env.local</code> y Vercel (<code>VOICE_PROVIDER_API_KEY</code>, <code>VOICE_PROVIDER_PHONE_NUMBER_ID</code>).
+                  </p>
+                </div>
+              )}
+
+              {/* FAILED BANNER */}
+              {voiceCallStatus === "failed" && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-[12.5px] text-rose-800">
+                  <div className="font-semibold">Llamada no completada</div>
+                  <div className="mt-0.5 text-rose-600">{voiceError || "Ocurrió un error al contactar al teléfono de destino."}</div>
+                </div>
+              )}
+
+              {/* SUCCESS RESULT */}
+              {voiceCallStatus === "completed" && voiceResult && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/90 p-4 text-[12.5px] text-emerald-950">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                    <Sparkles className="h-4 w-4" />
+                    ¡Llamada completada y perfil actualizado!
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
+                    <div className="rounded-lg bg-white/80 p-2 text-center ring-1 ring-emerald-200">
+                      <span className="block text-slate-500">Antes</span>
+                      <span className="text-[15px] font-bold text-slate-700">{voiceResult.previousScore} %</span>
+                    </div>
+                    <div className="rounded-lg bg-emerald-100/80 p-2 text-center ring-1 ring-emerald-300">
+                      <span className="block text-emerald-800 font-semibold">Después</span>
+                      <span className="text-[15px] font-bold text-emerald-900">{voiceResult.newScore} %</span>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-emerald-800">
+                    Campos actualizados: {voiceResult.fieldsUpdated.join(", ")}.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+                  setIsVoiceModalOpen(false);
+                }}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50"
+              >
+                Cerrar
+              </button>
+              {voiceCallStatus === "idle" || voiceCallStatus === "failed" || voiceCallStatus === "unconfigured" ? (
+                <button
+                  type="button"
+                  onClick={startRealVoiceCall}
+                  className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-md shadow-violet-500/25 transition hover:bg-violet-700 active:scale-[0.98]"
+                >
+                  <PhoneCall className="h-4 w-4" />
+                  INICIAR LLAMADA CON IA
+                </button>
+              ) : voiceCallStatus === "completed" ? (
+                <button
+                  type="button"
+                  onClick={() => setIsVoiceModalOpen(false)}
+                  className="rounded-xl bg-emerald-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-md shadow-emerald-500/25 hover:bg-emerald-700"
+                >
+                  Entendido
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex items-center gap-2 rounded-xl bg-violet-400 px-5 py-2.5 text-[13px] font-semibold text-white"
+                >
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Procesando llamada...
+                </button>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-      <div className="relative border-t border-indigo-100/70 bg-indigo-50/30 px-5 py-2.5 text-[11px] text-slate-500">
-        Interacción simulada de demostración · no se contacta a ningún asociado
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
