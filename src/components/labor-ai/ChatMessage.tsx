@@ -56,23 +56,38 @@ export function AssistantMessage({ message, onRetry }: { message: ChatMessageTyp
                   <CircleCheck className="h-3.5 w-3.5 text-emerald-500" />
                   Respuesta generada por <b className="font-semibold text-slate-800">NEXA Laboral AI</b>
                 </span>
-                {isCombined && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/80 bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-900 shadow-xs">
-                    <Sparkles className="h-3 w-3 text-indigo-600" />
-                    INTELIGENCIA COMBINADA: Datos organizacionales + Fuentes documentales
-                  </span>
-                )}
-                {message.dataUsed && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-800 shadow-xs">
-                    <Database className="h-3 w-3 text-emerald-600" />
-                    Datos organizacionales analizados · Muestra POC: {message.sampleSize || 600} perfiles
-                  </span>
-                )}
-                {message.sources && message.sources.length > 0 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200/80 bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-800 shadow-xs">
-                    <BookOpen className="h-3 w-3 text-violet-600" />
-                    Conocimiento Sergio Flórez &amp; Abogados · {message.sources.length} fuente{message.sources.length === 1 ? "" : "s"}
-                  </span>
+                {isCombined ? (
+                  <>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/90 bg-indigo-50/90 px-3 py-1 text-[11.5px] font-semibold text-indigo-900 shadow-xs">
+                      <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                      INTELIGENCIA COMBINADA: Datos organizacionales + Conocimiento jurídico especializado
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-800 shadow-xs">
+                      <Database className="h-3 w-3 text-emerald-600" />
+                      {Number(message.sampleSize || 10000).toLocaleString("es-CO")} perfiles analizados
+                    </span>
+                    {message.sources && message.sources.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200/80 bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-800 shadow-xs">
+                        <BookOpen className="h-3 w-3 text-violet-600" />
+                        {message.sources.length} fuente{message.sources.length === 1 ? "" : "s"} documental{message.sources.length === 1 ? "" : "es"} consultada{message.sources.length === 1 ? "" : "s"}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {message.dataUsed && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-800 shadow-xs">
+                        <Database className="h-3 w-3 text-emerald-600" />
+                        Datos organizacionales analizados · Muestra POC: {Number(message.sampleSize || 10000).toLocaleString("es-CO")} perfiles
+                      </span>
+                    )}
+                    {message.sources && message.sources.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200/80 bg-violet-50 px-2.5 py-0.5 text-[11px] font-medium text-violet-800 shadow-xs">
+                        <BookOpen className="h-3 w-3 text-violet-600" />
+                        Conocimiento Sergio Flórez &amp; Abogados · {message.sources.length} fuente{message.sources.length === 1 ? "" : "s"}
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             )}

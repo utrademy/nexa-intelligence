@@ -64,6 +64,8 @@ async function requestAnswer(
     sampleSize: data.sampleSize,
     sources: data.sources,
     mode: data.mode,
+    knowledgeUsed: data.knowledgeUsed,
+    retrievedChunkCount: data.retrievedChunkCount,
   };
 }
 
@@ -134,7 +136,7 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
 
     const controller = new AbortController();
     requestRef.current = controller;
-    let update: Pick<ChatMessage, "content" | "status" | "dataUsed" | "sampleSize" | "sources" | "mode">;
+    let update: Partial<ChatMessage>;
     try {
       const activeAreas = Array.from(enabledAreas).filter((id) =>
         areas.some((a) => a.id === id && a.documents > 0)
@@ -146,6 +148,8 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
         sampleSize: res.sampleSize,
         sources: res.sources,
         mode: res.mode,
+        knowledgeUsed: res.knowledgeUsed,
+        retrievedChunkCount: res.retrievedChunkCount,
         status: "done",
       };
     } catch {

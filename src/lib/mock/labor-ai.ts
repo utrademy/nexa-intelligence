@@ -1,9 +1,7 @@
 export const SUGGESTED_QUESTIONS = [
-  "Analiza nuestra población e identifica las principales brechas de información laboral y qué deberíamos revisar.",
-  "¿Cuántas personas tienen información laboral incompleta y qué aspectos deberían revisarse según nuestra documentación?",
-  "Analiza nuestros datos de caracterización y dime dónde deberíamos priorizar la recolección de información.",
-  "¿Cuáles son los tres elementos esenciales para que exista un contrato de trabajo según el Código Sustantivo del Trabajo?",
-  "¿Qué aspectos debería revisar una empresa colombiana frente a sus obligaciones laborales de inclusión?",
+  "Analiza nuestra población e identifica las principales brechas de información laboral. ¿Qué deberíamos revisar según nuestra documentación?",
+  "¿Cuántos perfiles tienen información laboral incompleta y qué información deberíamos priorizar para realizar un análisis laboral más completo?",
+  "Analiza la caracterización actual de nuestra población e identifica dónde deberíamos priorizar la recolección de información.",
 ];
 
 export const DISCLAIMER =

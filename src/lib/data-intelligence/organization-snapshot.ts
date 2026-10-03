@@ -73,7 +73,15 @@ export interface OrganizationSnapshot {
   };
 }
 
+let cachedSnapshot: OrganizationSnapshot | null = null;
+let cachedSnapshotExpiresAt = 0;
+const SNAPSHOT_CACHE_TTL_MS = 60_000;
+
 export async function getOrganizationIntelligenceSnapshot(): Promise<OrganizationSnapshot | null> {
+  if (cachedSnapshot && Date.now() < cachedSnapshotExpiresAt) {
+    return cachedSnapshot;
+  }
+
   try {
     const supabase = getSupabaseServerClient();
 
@@ -207,7 +215,7 @@ export async function getOrganizationIntelligenceSnapshot(): Promise<Organizatio
       }
     }
 
-    return {
+    const snapshotResult: OrganizationSnapshot = {
       dataset: {
         type: "synthetic_poc_sample",
         sampleSize,
@@ -253,6 +261,10 @@ export async function getOrganizationIntelligenceSnapshot(): Promise<Organizatio
         targetsSummary,
       },
     };
+
+    cachedSnapshot = snapshotResult;
+    cachedSnapshotExpiresAt = Date.now() + SNAPSHOT_CACHE_TTL_MS;
+    return snapshotResult;
   } catch (err) {
     console.error("[data-intelligence] Failed to generate snapshot:", err);
     return null;

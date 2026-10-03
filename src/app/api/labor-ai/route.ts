@@ -99,10 +99,22 @@ export async function POST(request: Request) {
     `[labor-ai] Classified query mode: ${mode} (asksOrg: ${classification.asksOrg}, asksKnowledge: ${classification.asksKnowledge}, canUseOrg: ${classification.canUseOrg}, canUseKnowledge: ${classification.canUseKnowledge})`
   );
 
-  // 2. Fetch and inject real database intelligence if applicable
+  // 2. Fetch organizational snapshot and retrieve RAG chunks in parallel
+  console.log(
+    `[labor-ai] Executing data fetching in parallel (fetchOrg: ${classification.canUseOrg}, fetchRAG: ${classification.canUseKnowledge})...`
+  );
+  const [snapshot, retrievedChunks] = await Promise.all([
+    classification.canUseOrg ? getOrganizationIntelligenceSnapshot() : Promise.resolve(null),
+    classification.canUseKnowledge
+      ? searchKnowledgeChunks(parsed.question, {
+          matchThreshold: 0.35,
+          matchCount: 4,
+          filterKnowledgeAreas: parsed.knowledgeAreas,
+        })
+      : Promise.resolve([]),
+  ]);
+
   if (classification.canUseOrg) {
-    console.log("[labor-ai] Routing query to Supabase Organizational Data Intelligence Layer...");
-    const snapshot = await getOrganizationIntelligenceSnapshot();
     if (!snapshot) {
       console.error("[labor-ai] Failed to retrieve organizational snapshot from Supabase");
       return fail(503, LABOR_AI_DATA_ERROR_MESSAGE);
@@ -119,15 +131,8 @@ export async function POST(request: Request) {
     instructions = `${instructions}\n\n[AVISO DE CONTEXTO ORGANIZACIONAL: El usuario ha desactivado el acceso a los datos de la organización. NO mencione ni asuma datos internos de Financiera Comultrasan ni métricas demográficas internas en su respuesta. Responda estrictamente desde el marco normativo legal general.]`;
   }
 
-  // 3. Determine if question requires or benefits from specialized document knowledge (RAG)
+  // 3. Process RAG chunks if retrieved
   if (classification.canUseKnowledge) {
-    console.log(`[labor-ai] Checking Knowledge Center for filters: [${parsed.knowledgeAreas.join(", ")}]...`);
-    const retrievedChunks = await searchKnowledgeChunks(parsed.question, {
-      matchThreshold: 0.35,
-      matchCount: 4,
-      filterKnowledgeAreas: parsed.knowledgeAreas,
-    });
-
     if (retrievedChunks.length > 0) {
       console.log(`[labor-ai] RAG: Found ${retrievedChunks.length} relevant chunks`);
       const citations = formatChunksAsCitations(retrievedChunks);
@@ -174,12 +179,17 @@ export async function POST(request: Request) {
       return fail(502);
     }
 
+    const knowledgeUsed = Boolean(sources && sources.length > 0);
+    const retrievedChunkCount = sources ? sources.length : 0;
+
     return Response.json({
       answer,
       dataUsed,
       sampleSize,
       sources,
       mode,
+      knowledgeUsed,
+      retrievedChunkCount,
     } satisfies LaborAiResponse);
   } catch (error) {
     if (error instanceof OpenAI.APIError) {

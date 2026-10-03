@@ -90,7 +90,7 @@ Síntesis ejecutiva de alto nivel para comités de gestión humana o directivos,
 
 ## HALLAZGOS EN LOS DATOS
 Inicie obligatoriamente con la frase exacta:
-"Muestra POC analizada: ${sampleSize || 600} perfiles"
+"Muestra POC analizada: ${sampleSize ? Number(sampleSize).toLocaleString("es-CO") : "10.000"} perfiles sintéticos"
 Describa las cifras numéricas y porcentajes exactos calculados directamente desde Supabase que sustentan la consulta (brechas de información laboral, estados de inclusión, completitud). NUNCA invente cifras.
 
 ## ANÁLISIS LABORAL
@@ -114,7 +114,7 @@ MODO DE OPERACIÓN ACTIVO: INTELIGENCIA ORGANIZACIONAL (DATOS SUPABASE)
 Estructure su respuesta en Markdown con estos encabezados:
 ## RESUMEN EJECUTIVO
 ## ANÁLISIS DE DATOS
-Inicie indicando: "Muestra POC analizada: ${sampleSize || 600} perfiles"
+Inicie indicando: "Muestra POC analizada: ${sampleSize ? Number(sampleSize).toLocaleString("es-CO") : "10.000"} perfiles sintéticos"
 ## HALLAZGOS RELEVANTES
 ## IMPLICACIONES LABORALES Y ORGANIZACIONALES
 ## INFORMACIÓN QUE DEBERÍA REVISARSE

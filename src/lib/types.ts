@@ -220,6 +220,8 @@ export interface ChatMessage {
   sampleSize?: number;
   sources?: SourceCitation[];
   mode?: IntelligenceMode;
+  knowledgeUsed?: boolean;
+  retrievedChunkCount?: number;
 }
 
 export type IntelligenceMode = "GENERAL" | "ORGANIZATIONAL" | "KNOWLEDGE" | "COMBINED";
@@ -243,6 +245,8 @@ export type LaborAiResponse =
       sampleSize?: number;
       sources?: SourceCitation[];
       mode?: IntelligenceMode;
+      knowledgeUsed?: boolean;
+      retrievedChunkCount?: number;
     }
   | { error: string };
 

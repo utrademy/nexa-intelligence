@@ -223,6 +223,11 @@ export function shouldPerformKnowledgeRetrieval(question: string): boolean {
     "evaluacion juridica",
     "marco normativo",
     "revisar segun",
+    "periodo de prueba",
+    "prueba",
+    "codigo sustantivo",
+    "terminacion",
+    "liquidacion",
   ];
 
   return docKeywords.some((kw) => q.includes(kw));
