@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     console.error("[labor-ai] OPENAI_API_KEY is not configured");
-    return fail(500);
+    return fail(500, "OPENAI_API_KEY is not configured in environment");
   }
 
   let parsed: ReturnType<typeof parseBody>;
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
   } catch {
     parsed = null;
   }
-  if (!parsed) return fail(400);
+  if (!parsed) return fail(400, "Invalid question payload");
 
   let instructions = LABOR_AI_INSTRUCTIONS;
   let dataUsed = false;
@@ -177,7 +177,7 @@ export async function POST(request: Request) {
     const answer = response.output_text?.trim();
     if (!answer) {
       console.error("[labor-ai] Empty response from model", { status: response.status });
-      return fail(502);
+      return fail(502, `Empty response from model (status ${response.status})`);
     }
 
     const knowledgeUsed = Boolean(sources && sources.length > 0);
@@ -193,11 +193,14 @@ export async function POST(request: Request) {
       retrievedChunkCount,
     } satisfies LaborAiResponse);
   } catch (error) {
+    let msg = "Error";
     if (error instanceof OpenAI.APIError) {
+      msg = `OpenAI APIError ${error.status} [${error.code}]: ${error.message}`;
       console.error("[labor-ai] OpenAI request failed", { status: error.status, type: error.type, code: error.code });
     } else {
+      msg = error instanceof Error ? `${error.name}: ${error.message}` : "Unexpected error";
       console.error("[labor-ai] Unexpected error", error instanceof Error ? error.name : "unknown");
     }
-    return fail(502);
+    return fail(502, msg);
   }
 }
