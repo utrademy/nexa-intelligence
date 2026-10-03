@@ -1,7 +1,7 @@
 "use client";
 
-import { CalendarDays } from "lucide-react";
-import Link from "next/link";
+import { CalendarDays, ChevronRight, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { ChannelBadge } from "@/components/ui/ChannelBadge";
 import { ProgressBar } from "@/components/ui/Progress";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -15,11 +15,18 @@ export function CampaignCard({
   campaign: AiCampaign;
   onSelect?: (campaign: AiCampaign) => void;
 }) {
+  const router = useRouter();
   const completion = campaign.audience ? Math.round((campaign.completed / campaign.audience) * 100) : 0;
   return (
     <div
-      onClick={() => onSelect?.(campaign)}
-      className="group block min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/70 bg-white p-4 transition hover:border-slate-300 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.18)] cursor-pointer"
+      onClick={() => {
+        if (onSelect) {
+          onSelect(campaign);
+        } else {
+          router.push("/campaigns");
+        }
+      }}
+      className="group block min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/70 bg-white p-4 transition hover:border-indigo-300 hover:shadow-[0_8px_24px_-12px_rgba(79,70,229,0.18)] cursor-pointer"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -49,6 +56,13 @@ export function CampaignCard({
           <CalendarDays className="h-3.5 w-3.5 shrink-0" />
           <span>{formatDate(campaign.startDate)} – {formatDate(campaign.endDate)}</span>
         </span>
+      </div>
+      <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11.5px] font-medium text-slate-500 transition-colors group-hover:bg-indigo-50/70 group-hover:text-indigo-700">
+        <span className="flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-violet-500 group-hover:text-indigo-600" />
+          <span>Ver detalles y demo en vivo</span>
+        </span>
+        <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
       </div>
     </div>
   );

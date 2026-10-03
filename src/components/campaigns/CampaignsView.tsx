@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CircleUser, Megaphone, Pause, PhoneCall, Plus } from "lucide-react";
+import { CalendarDays, CircleUser, Megaphone, PhoneCall, Plus } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { AreaSeriesChart, BarSeriesChart, ChartLegend, DonutChart, LineSeriesChart } from "@/components/charts/Charts";
@@ -303,8 +303,21 @@ export function CampaignsView(props: CampaignsViewProps) {
         </div>
       </Card>
 
-      <div>
-        <h3 className="mb-3 text-[15px] font-semibold text-slate-900">Todas las campañas</h3>
+      <div className="space-y-3.5">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-[16px] font-semibold text-slate-900">Todas las campañas</h3>
+              <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                {campaigns.length} disponibles
+              </span>
+            </div>
+            <p className="mt-0.5 text-[12.5px] text-slate-500">
+              Haz clic en cualquiera de las tarjetas para auditar métricas en tiempo real, ver la segmentación de asociados y probar el <strong className="font-semibold text-violet-700">Modo Demostración Seguro</strong> con llamadas de voz con IA.
+            </p>
+          </div>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {campaigns.map((c) => (
             <div key={c.id} className="animate-slide-up">
