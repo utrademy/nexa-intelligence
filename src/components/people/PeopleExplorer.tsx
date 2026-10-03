@@ -130,11 +130,27 @@ export function PeopleExplorer({ people, total, filterOptions }: { people: Perso
                 className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50/50 pr-3 pl-10 text-[13.5px] text-slate-800 placeholder:text-slate-400 transition focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:outline-none"
               />
             </div>
-            <div className="flex items-center gap-2 text-[12.5px] whitespace-nowrap text-slate-500">
-              <Sparkles className="h-4 w-4 text-indigo-500" />
-              Pruebe: <button className="font-medium text-indigo-600 hover:underline" onClick={() => setFilter("profileStatus", "Vacíos críticos")}>vacíos críticos</button>·
-              <button className="font-medium text-indigo-600 hover:underline" onClick={() => setFilter("age", "25–34")}>25 a 34 años</button>·
-              <button className="font-medium text-indigo-600 hover:underline" onClick={() => setFilter("employment", "Sin información")}>sin información laboral</button>
+            <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-slate-500">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+              <span>Filtros rápidos:</span>
+              <button
+                className="rounded-md bg-amber-50 px-2 py-0.5 font-medium text-amber-700 ring-1 ring-amber-600/20 hover:bg-amber-100 transition"
+                onClick={() => setFilter("inclusion", "Pendiente")}
+              >
+                Sin datos de incapacidad/inclusión
+              </button>
+              <button
+                className="rounded-md bg-rose-50 px-2 py-0.5 font-medium text-rose-700 ring-1 ring-rose-600/20 hover:bg-rose-100 transition"
+                onClick={() => setFilter("profileStatus", "Vacíos críticos")}
+              >
+                Vacíos críticos
+              </button>
+              <button
+                className="rounded-md bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 ring-1 ring-emerald-600/20 hover:bg-emerald-100 transition"
+                onClick={() => setFilter("profileStatus", "Completo")}
+              >
+                Perfiles completos
+              </button>
             </div>
           </div>
 

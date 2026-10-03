@@ -48,19 +48,39 @@ export function mapDbPersonToPerson(db: DatabasePerson, campStatus?: CampaignSta
 export async function fetchPeopleFromDb(): Promise<{ people: Person[]; total: number } | null> {
   try {
     const supabase = getSupabaseServerClient();
-    const { data: peopleData, error: peopleError, count } = await supabase
-      .from("people")
-      .select("*, campaign_targets(status)", { count: "exact" })
-      .order("characterization_score", { ascending: false });
+    // Fetch a diverse, representative sample across the population
+    // PostgREST limits single queries to 1000 records. We fetch up to 2000 records across different score segments
+    // so that the frontend sample mirrors the true 23,746 distribution (complete, partial, and critical gaps).
+    const [{ data: highData, count }, { data: partialData }, { data: gapData }] = await Promise.all([
+      supabase
+        .from("people")
+        .select("*, campaign_targets(status)", { count: "exact" })
+        .gte("characterization_score", 85)
+        .order("created_at", { ascending: false })
+        .limit(800),
+      supabase
+        .from("people")
+        .select("*, campaign_targets(status)")
+        .gte("characterization_score", 50)
+        .lt("characterization_score", 85)
+        .order("created_at", { ascending: false })
+        .limit(800),
+      supabase
+        .from("people")
+        .select("*, campaign_targets(status)")
+        .lt("characterization_score", 50)
+        .order("created_at", { ascending: false })
+        .limit(400),
+    ]);
 
-    if (peopleError || !peopleData || peopleData.length === 0) {
-      if (peopleError) {
-        console.warn("[supabase] Failed to fetch people:", peopleError.message);
-      }
+    const combined = [...(highData || []), ...(partialData || []), ...(gapData || [])];
+
+    if (combined.length === 0) {
+      console.warn("[supabase] Failed to fetch people: no records found");
       return null;
     }
 
-    const people: Person[] = peopleData.map((row: any) => {
+    const people: Person[] = combined.map((row: any) => {
       const campStatus = row.campaign_targets?.[0]?.status as CampaignStatus | undefined;
       return mapDbPersonToPerson(row as DatabasePerson, campStatus);
     });

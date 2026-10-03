@@ -19,6 +19,7 @@ export interface NormalizedCallResult {
   municipality?: string;
   residence?: string;
   headOfHousehold?: string;
+  disability?: string;
   // Financiero / Social
   savings?: string;
   goals?: string;
@@ -147,17 +148,22 @@ Haz exactamente UNA sola pregunta a la vez, esperando calmadamente la respuesta 
 4. Nivel educativo:
 "¿Cuál ha sido su nivel educativo más alto alcanzado y en qué área de estudio o disciplina?"
 
-5. Ingresos y metas:
-"Para orientarle mejores beneficios, ¿en qué rango aproximado están sus ingresos mensuales y tiene alguna meta financiera o de ahorro para este año?"
+5. Condición de salud e incapacidad laboral:
+"De manera voluntaria para orientar programas de bienestar e inclusión de la entidad, ¿cuenta usted actualmente con alguna condición de discapacidad o incapacidad médica permanente, o no presenta ninguna?"
+
+6. Ingresos y metas:
+"Para orientarle mejores convenios y beneficios, ¿en qué rango aproximado están sus ingresos mensuales y tiene alguna meta financiera o de ahorro para este año?"
 
 REGLAS CRÍTICAS DE CONDUCCIÓN:
 - Habla pausado y espera la respuesta completa antes de formular la siguiente pregunta.
-- Si la persona no sabe o no desea responder un dato, di: "No se preocupe, no hay problema." y pasa amablemente a la siguiente.
-- NO preguntes sobre temas sensibles como discapacidad, afiliación política, religión ni salud.
+- Si la persona no sabe o no desea responder un dato (por ejemplo sobre discapacidad/salud o ingresos), di con calidez: "No se preocupe, no hay ningún problema, es completamente voluntario." y pasa amablemente a la siguiente.
+- Si la persona responde que no tiene ninguna discapacidad o incapacidad, regístralo como "No reporta discapacidad / Ninguna".
+- Si menciona alguna limitación (por ejemplo física, visual, auditiva o incapacidad laboral), anótala con respeto y empatía.
+- NO preguntes sobre afiliación política, religión ni vida íntima.
 - NO ofrezcas créditos, asesoría legal ni financiera personalizada.
 
 PASO 3: CIERRE DEFINITIVO Y COLGADO OBLIGATORIO
-Cuando hayas formulado las 5 preguntas o el usuario complete los datos:
+Cuando hayas formulado las preguntas o el usuario complete los datos:
 1. Si el usuario pregunta si es todo, o antes de cerrar: "¿Tiene alguna inquietud puntual sobre esta encuesta de actualización de datos de Financiera Comultrasan?"
 2. Si el usuario no tiene dudas o ya las aclaraste, despídete:
 "Muchísimas gracias por su amabilidad y por atendernos. Hemos terminado con éxito la actualización. Que termine de pasar un excelente día, hasta luego."
@@ -284,10 +290,15 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
                           description: "Nivel educativo más alto",
                         },
                         studyField: { type: "string", description: "Área de estudio, profesión o disciplina" },
-                        // Ubicación e inclusión
+                        // Inclusión y salud / discapacidad
+                        disability: {
+                          type: "string",
+                          description: "Condición de discapacidad o incapacidad laboral permanente (ej. 'No reporta discapacidad / Ninguna', 'Discapacidad física', 'Discapacidad visual', 'Discapacidad auditiva', etc.)",
+                        },
+                        headOfHousehold: { type: "string", description: "Jefatura de hogar (Sí / No)" },
+                        // Ubicación
                         municipality: { type: "string", description: "Municipio o ciudad de residencia" },
                         residence: { type: "string", description: "Zona de residencia (Urbana o Rural)" },
-                        headOfHousehold: { type: "string", description: "Jefatura de hogar (Sí / No)" },
                         // Financiero / Social
                         savings: { type: "string", description: "Capacidad de ahorro mensual estimada" },
                         goals: { type: "string", description: "Metas financieras principales (vivienda, educación, negocio, etc.)" },
@@ -528,6 +539,7 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
       municipality: combined.municipality || combined.city ? String(combined.municipality || combined.city) : undefined,
       residence: combined.residence ? String(combined.residence) : undefined,
       headOfHousehold: combined.headOfHousehold ? String(combined.headOfHousehold) : undefined,
+      disability: combined.disability ? String(combined.disability) : undefined,
       // Financiero y social
       savings: combined.savings ? String(combined.savings) : undefined,
       goals: combined.goals ? String(combined.goals) : undefined,

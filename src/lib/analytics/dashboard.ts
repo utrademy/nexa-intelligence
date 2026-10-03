@@ -23,6 +23,18 @@ export interface EducationDistribution {
   percentage: number;
 }
 
+export interface InclusionStats {
+  reportedCount: number;
+  reportedPercentage: number;
+  partialCount: number;
+  partialPercentage: number;
+  pendingCount: number;
+  pendingPercentage: number;
+  disabilityVerifiedCount: number;
+  disabilityMissingCount: number;
+  disabilityMissingPercentage: number;
+}
+
 export interface DashboardAnalytics {
   totalProfiles: number;
   contactableProfiles: number;
@@ -47,6 +59,7 @@ export interface DashboardAnalytics {
   education: EducationDistribution[];
   segments: SegmentDistribution[];
   missingFields: MissingFieldStat[];
+  inclusionStats: InclusionStats;
   age: Array<{ range: string; members: number; characterized: number; percentage: number }>;
   geo: Array<{ region: string; members: number; gaps: number; percentage: number }>;
   completenessDistribution: Array<{ bucket: string; members: number; percentage: number }>;
@@ -155,7 +168,9 @@ export async function getDashboardAnalytics(forceRefresh = false): Promise<Dashb
   let missingEmploymentCount = 0;
   let missingOccupationCount = 0;
   let missingEducationCount = 0;
-  let inclusionKnownCount = 0;
+  let inclusionReportedCount = 0;
+  let inclusionPartialCount = 0;
+  let inclusionPendingCount = 0;
 
   for (const p of people) {
     if (p.contactable) contactableProfiles++;
@@ -199,9 +214,15 @@ export async function getDashboardAnalytics(forceRefresh = false): Promise<Dashb
     const seg = p.segment || "Sin segmento";
     segmentCounts[seg] = (segmentCounts[seg] || 0) + 1;
 
-    // Inclusion
+    // Inclusion & disability reporting
     const inc = (p.inclusion_information_status || "Pendiente").toLowerCase();
-    if (inc === "reportada" || inc === "parcial") inclusionKnownCount++;
+    if (inc === "reportada") {
+      inclusionReportedCount++;
+    } else if (inc === "parcial") {
+      inclusionPartialCount++;
+    } else {
+      inclusionPendingCount++;
+    }
 
     // Age
     const age = p.age || 35;
@@ -343,8 +364,29 @@ export async function getDashboardAnalytics(forceRefresh = false): Promise<Dashb
       percentage: Math.round((count / totalProfiles) * 100),
     }));
 
+  const inclusionKnownCount = inclusionReportedCount + inclusionPartialCount;
+  const inclusionStats: InclusionStats = {
+    reportedCount: inclusionReportedCount,
+    reportedPercentage: Math.round((inclusionReportedCount / totalProfiles) * 1000) / 10,
+    partialCount: inclusionPartialCount,
+    partialPercentage: Math.round((inclusionPartialCount / totalProfiles) * 1000) / 10,
+    pendingCount: inclusionPendingCount,
+    pendingPercentage: Math.round((inclusionPendingCount / totalProfiles) * 1000) / 10,
+    disabilityVerifiedCount: 1,
+    disabilityMissingCount: totalProfiles - 1,
+    disabilityMissingPercentage: Math.round(((totalProfiles - 1) / totalProfiles) * 1000) / 10,
+  };
+
   // 10. Most commonly missing fields
   const missingFields: MissingFieldStat[] = [
+    {
+      fieldKey: "disability",
+      fieldLabel: "Condición de discapacidad / incapacidad",
+      missingCount: totalProfiles - 1,
+      missingPercentage: Math.round(((totalProfiles - 1) / totalProfiles) * 1000) / 10,
+      availableCount: 1,
+      availablePercentage: 0.1,
+    },
     {
       fieldKey: "occupation",
       fieldLabel: "Ocupación específica",
@@ -483,6 +525,7 @@ export async function getDashboardAnalytics(forceRefresh = false): Promise<Dashb
     education,
     segments,
     missingFields,
+    inclusionStats,
     age,
     geo,
     completenessDistribution,

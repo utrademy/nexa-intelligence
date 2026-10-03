@@ -443,29 +443,33 @@ export function AiCharacterizationCard({
 
       {/* MODAL DE LLAMADA DE VOZ REAL CON IA */}
       {isVoiceModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <button
-              onClick={() => {
-                if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-                setIsVoiceModalOpen(false);
-              }}
-              className="absolute top-4 right-4 text-slate-400 transition hover:text-slate-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/30">
-                <PhoneCall className="h-5 w-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-sm animate-fade-in">
+          <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            {/* MODAL HEADER (FIJO) */}
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4.5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/30">
+                  <PhoneCall className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-semibold text-slate-900">Completar perfil con IA</h3>
+                  <p className="text-[12px] text-slate-500">Llamada telefónica outbound en tiempo real</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-[17px] font-semibold text-slate-900">Completar perfil con IA</h3>
-                <p className="text-[12px] text-slate-500">Llamada telefónica outbound en tiempo real</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+                  setIsVoiceModalOpen(false);
+                }}
+                className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="mt-5 space-y-4">
+            {/* MODAL BODY (SCROLLABLE) */}
+            <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4 space-y-4">
               <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 text-[13px]">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500">Canal:</span>
@@ -579,14 +583,15 @@ export function AiCharacterizationCard({
               )}
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-2.5">
+            {/* MODAL FOOTER (FIJO Y ACCESIBLE SIEMPRE) */}
+            <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/80 px-6 py-4">
               <button
                 type="button"
                 onClick={() => {
                   if (pollTimerRef.current) clearInterval(pollTimerRef.current);
                   setIsVoiceModalOpen(false);
                 }}
-                className="rounded-xl border border-slate-200 px-4 py-2.5 text-[13px] font-medium text-slate-600 hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50"
               >
                 Cerrar
               </button>

@@ -382,29 +382,33 @@ export function CampaignDetailModal({
 
       {/* MODAL MODO DEMOSTRACIÓN SEGURO */}
       {demoOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <button
-              onClick={() => {
-                if (pollRef.current) clearInterval(pollRef.current);
-                setDemoOpen(false);
-              }}
-              className="absolute top-4 right-4 text-slate-400 transition hover:text-slate-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/30">
-                <PhoneCall className="h-5 w-5" />
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-sm animate-fade-in">
+          <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            {/* MODAL HEADER (FIJO) */}
+            <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4.5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/30">
+                  <PhoneCall className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-[16px] font-semibold text-slate-900">MODO DEMOSTRACIÓN SEGURO</h3>
+                  <p className="text-[12px] text-slate-500">Ejecución controlada de llamada con IA para ventas</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-[17px] font-semibold text-slate-900">MODO DEMOSTRACIÓN SEGURO</h3>
-                <p className="text-[12px] text-slate-500">Ejecución controlada de llamada con IA para ventas</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (pollRef.current) clearInterval(pollRef.current);
+                  setDemoOpen(false);
+                }}
+                className="rounded-lg p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="mt-4 space-y-4">
+            {/* MODAL BODY (SCROLLABLE) */}
+            <div className="scrollbar-thin flex-1 overflow-y-auto px-6 py-4 space-y-4">
               <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-[12px] text-amber-900 flex items-start gap-2.5">
                 <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
                 <div>
@@ -529,7 +533,8 @@ export function CampaignDetailModal({
               )}
             </div>
 
-            <div className="mt-6 flex items-center justify-end gap-2.5">
+            {/* MODAL FOOTER (FIJO Y ACCESIBLE SIEMPRE) */}
+            <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/80 px-6 py-4">
               <Button
                 variant="ghost"
                 onClick={() => {

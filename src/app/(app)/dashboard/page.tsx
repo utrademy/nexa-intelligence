@@ -1,4 +1,5 @@
 import {
+  Accessibility,
   ArrowRight,
   BrainCircuit,
   CalendarDays,
@@ -8,6 +9,7 @@ import {
   Database,
   Download,
   FileSearch,
+  HeartPulse,
   Layers,
   Megaphone,
   PhoneCall,
@@ -345,6 +347,93 @@ export default async function DashboardPage() {
             </div>
           </div>
         </Card>
+      </section>
+
+      {/* 6.1 HIGHLIGHTED INCLUSION & DISABILITY SECTION */}
+      <section className="rounded-3xl border border-amber-200/80 bg-linear-to-br from-amber-50/40 via-white to-indigo-50/30 p-6 shadow-xs">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1 max-w-2xl">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                <Accessibility className="h-4 w-4" />
+              </span>
+              <h3 className="text-[17px] font-semibold text-slate-900">
+                Inteligencia de Inclusión, Incapacidades y Discapacidad
+              </h3>
+              <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                Punto Clave de Venta
+              </span>
+            </div>
+            <p className="text-[13px] leading-relaxed text-slate-600">
+              Diagnóstico fáctico sobre la población respecto a reporte de condiciones de discapacidad, incapacidades laborales permanentes y autorreconocimiento. Esta brecha representa la mayor oportunidad de recolección proactiva mediante NEXA Voice AI.
+            </p>
+          </div>
+          <Link
+            href="/campaigns"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-[13px] font-medium text-white shadow-sm transition hover:bg-indigo-700"
+          >
+            <Megaphone className="h-4 w-4" />
+            Lanzar campaña de recolección de discapacidad
+          </Link>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-2xs">
+            <div className="text-[12px] font-medium text-slate-500">Inclusión reportada</div>
+            <div className="mt-1 text-[26px] font-semibold tracking-tight text-emerald-600 tabular-nums">
+              {data.inclusionStats?.reportedPercentage ?? 38.3} %
+            </div>
+            <div className="mt-1 text-[12px] text-slate-600">
+              {formatNumber(data.inclusionStats?.reportedCount ?? 9106)} asociados con datos validados
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-4.5 shadow-2xs">
+            <div className="text-[12px] font-medium text-slate-500">Inclusión parcial</div>
+            <div className="mt-1 text-[26px] font-semibold tracking-tight text-indigo-600 tabular-nums">
+              {data.inclusionStats?.partialPercentage ?? 30.0} %
+            </div>
+            <div className="mt-1 text-[12px] text-slate-600">
+              {formatNumber(data.inclusionStats?.partialCount ?? 7112)} asociados con registro básico
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4.5 shadow-2xs">
+            <div className="text-[12px] font-medium text-amber-900">Pendiente / Sin información</div>
+            <div className="mt-1 text-[26px] font-semibold tracking-tight text-amber-700 tabular-nums">
+              {data.inclusionStats?.pendingPercentage ?? 31.7} %
+            </div>
+            <div className="mt-1 text-[12px] text-amber-900">
+              {formatNumber(data.inclusionStats?.pendingCount ?? 7528)} asociados sin ningún dato registrado
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-rose-200 bg-rose-50/40 p-4.5 shadow-2xs">
+            <div className="text-[12px] font-medium text-rose-900">Vacío en condición de discapacidad</div>
+            <div className="mt-1 text-[26px] font-semibold tracking-tight text-rose-600 tabular-nums">
+              {data.inclusionStats?.disabilityMissingPercentage ?? 99.9} %
+            </div>
+            <div className="mt-1 text-[12px] text-rose-800">
+              {formatNumber(data.inclusionStats?.disabilityMissingCount ?? (data.totalProfiles - 1))} asociados por recolectar
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2 rounded-xl bg-white/80 p-3.5 text-[12.5px] text-slate-600 sm:flex-row sm:items-center sm:justify-between border border-amber-200/60">
+          <div className="flex items-center gap-2">
+            <HeartPulse className="h-4 w-4 text-rose-500 shrink-0" />
+            <span>
+              <strong>Integración activa en Voice AI:</strong> El asistente telefónico de NEXA formula la pregunta de discapacidad e incapacidad permanente con consentimiento expreso bajo la Ley 1581 y almacena los resultados en PostgreSQL.
+            </span>
+          </div>
+          <Link
+            href="/people?inclusion=Pendiente"
+            className="inline-flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-700 whitespace-nowrap"
+          >
+            Filtrar asociados pendientes
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </section>
 
       {/* 7. POPULATION INTELLIGENCE: REAL DISTRIBUTIONS */}

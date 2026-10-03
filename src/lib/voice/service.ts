@@ -288,6 +288,21 @@ export async function persistVoiceCharacterization(
     fieldsUpdated.push("Jefatura de hogar");
   }
 
+  if (result.disability) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "inclusion",
+      attribute_key: "disability",
+      attribute_value: result.disability,
+      source: "Llamada con IA",
+      confidence: 0.95,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Condición de discapacidad");
+    personUpdates.inclusion_information_status = "Reportada";
+  }
+
   // Financiero / Social
   if (result.savings) {
     attributeRows.push({

@@ -44,6 +44,7 @@ export async function getDashboardData() {
     education: analytics.education,
     segments: analytics.segments,
     missingFields: analytics.missingFields,
+    inclusionStats: analytics.inclusionStats,
     completenessDistribution: analytics.completenessDistribution,
     insights: analytics.aiFindings,
     totalProfiles: analytics.totalProfiles,
