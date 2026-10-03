@@ -41,12 +41,17 @@ export function CampaignsView(props: CampaignsViewProps) {
   const [selectedCampaign, setSelectedCampaign] = useState<AiCampaign | null>(null);
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>("Todos");
 
+  const contactedRate = featured.audience > 0 ? Math.round((featured.contacted / featured.audience) * 100) : 0;
+  const responseRatePct = featured.contacted > 0 ? Math.round((featured.responded / featured.contacted) * 100) : 0;
+  const completionRatePct = featured.contacted > 0 ? Math.round((featured.completed / featured.contacted) * 100) : 0;
+  const completionOfAudience = featured.audience > 0 ? Math.round((featured.completed / featured.audience) * 100) : 0;
+
   const kpis: Kpi[] = [
     { id: "targeted", label: "Objetivo", value: formatNumber(featured.audience), icon: "target", tone: "slate", hint: "Asociados en la audiencia" },
-    { id: "contacted", label: "Contactados", value: formatNumber(featured.contacted), icon: "send", tone: "indigo", delta: "75 %", trend: "up", hint: "de la audiencia alcanzada" },
-    { id: "responded", label: "Respondieron", value: formatNumber(featured.responded), icon: "reply", tone: "cyan", delta: "69 %", trend: "up", hint: "tasa de respuesta" },
-    { id: "completed", label: "Completados", value: formatNumber(featured.completed), icon: "check", tone: "emerald", delta: "+142", trend: "up", hint: "perfiles actualizados por completo" },
-    { id: "completion", label: "Tasa de finalización", value: "73 %", icon: "percent", tone: "violet", delta: "En meta", trend: "flat", hint: "de la meta de la campaña" },
+    { id: "contacted", label: "Contactados", value: formatNumber(featured.contacted), icon: "send", tone: "indigo", delta: `${contactedRate} %`, trend: "up", hint: "de la audiencia alcanzada" },
+    { id: "responded", label: "Respondieron", value: formatNumber(featured.responded), icon: "reply", tone: "cyan", delta: `${responseRatePct} %`, trend: "up", hint: "tasa de respuesta" },
+    { id: "completed", label: "Completados", value: formatNumber(featured.completed), icon: "check", tone: "emerald", delta: `${completionRatePct} %`, trend: "up", hint: "perfiles actualizados por completo" },
+    { id: "completion", label: "Tasa de finalización", value: `${completionRatePct} %`, icon: "percent", tone: "violet", delta: `${completionOfAudience} % meta`, trend: "flat", hint: "efectividad sobre contactados" },
   ];
 
   const counts = useMemo(() => {
@@ -153,7 +158,7 @@ export function CampaignsView(props: CampaignsViewProps) {
         <Card>
           <CardHeader title="Resultados" subtitle="Estado de los asociados contactados" />
           <div className="px-6 pt-2 pb-6">
-            <DonutChart data={statusBreakdown} centerValue="73 %" centerLabel="De la meta" height={200} />
+            <DonutChart data={statusBreakdown} centerValue={`${completionRatePct} %`} centerLabel="Completados" height={200} />
             <div className="mt-4 space-y-2">
               {statusBreakdown.map((s) => (
                 <div key={s.name} className="flex items-center justify-between text-[12.5px]">

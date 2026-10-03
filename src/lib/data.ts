@@ -3,6 +3,7 @@ import * as knowledge from "./mock/knowledge";
 import { FILTER_OPTIONS, PEOPLE } from "./mock/people";
 import { buildProfile } from "./mock/profiles";
 import { fetchCampaignsFromDb, fetchPeopleFromDb, fetchPersonProfileFromDb } from "./supabase/data-service";
+import { getRealCampaignAnalytics } from "./analytics/campaign-analytics";
 import { getCampaignFeedInteractions, getRealSegmentCount } from "./campaigns/campaign-service";
 import { getRealIndexedCount, getRealKnowledgeDocuments } from "./knowledge/db";
 import { getDashboardAnalytics } from "./analytics/dashboard";
@@ -137,8 +138,9 @@ export async function getCampaignData() {
   const primaryCampaign = campaignList[0] || campaigns.FEATURED_CAMPAIGN;
   const mergedInteractions = feedInteractions.length > 0 ? feedInteractions : campaigns.CAMPAIGN_INTERACTIONS;
 
-  // Real presets computed dynamically from live database
-  const [sizeAll, sizeCritical, sizeLt70, sizeLt85] = await Promise.all([
+  // Real campaign analytics and presets computed dynamically from live database
+  const [campaignAnalytics, sizeAll, sizeCritical, sizeLt70, sizeLt85] = await Promise.all([
+    getRealCampaignAnalytics(primaryCampaign.id),
     getRealSegmentCount({ incompletenessFilter: "all_incomplete" }),
     getRealSegmentCount({ incompletenessFilter: "critical_gaps" }),
     getRealSegmentCount({ incompletenessFilter: "score_lt_70" }),
@@ -152,13 +154,21 @@ export async function getCampaignData() {
     { id: "score_lt_85", name: "Puntaje medio (< 85%)", description: "Asociados con información básica pero sin datos laborales", size: sizeLt85 },
   ];
 
+  const featuredCampaign = {
+    ...primaryCampaign,
+    audience: campaignAnalytics.audience,
+    contacted: campaignAnalytics.contacted,
+    responded: campaignAnalytics.responded,
+    completed: campaignAnalytics.completed,
+  };
+
   return {
-    campaigns: campaignList,
-    featured: primaryCampaign,
-    progress: campaigns.CAMPAIGN_PROGRESS,
-    channels: campaigns.CHANNEL_PERFORMANCE,
-    outcomes: campaigns.CAMPAIGN_OUTCOMES,
-    responseRate: campaigns.RESPONSE_RATE_TREND,
+    campaigns: campaignList.map((c) => (c.id === featuredCampaign.id ? featuredCampaign : c)),
+    featured: featuredCampaign,
+    progress: campaignAnalytics.progress,
+    channels: campaignAnalytics.channels,
+    outcomes: campaignAnalytics.outcomes,
+    responseRate: campaignAnalytics.responseRate,
     interactions: mergedInteractions,
     audiencePresets,
     collectableFields: campaigns.COLLECTABLE_FIELDS,

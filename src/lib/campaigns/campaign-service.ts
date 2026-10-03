@@ -217,10 +217,10 @@ export async function getCampaignExecutionMetrics(campaignId: string) {
     .eq("campaign_id", campaignId);
 
   const realInteractions = interactions || [];
-  const intentados = realInteractions.length;
-  const contestadas = realInteractions.filter((i) => i.status === "COMPLETED" || i.status === "IN_PROGRESS").length;
-  const completadas = realInteractions.filter((i) => i.status === "COMPLETED").length;
-  const fallidas = realInteractions.filter((i) => i.status === "FAILED" || i.status === "ERROR").length;
+  const intentados = campaign?.contacted_count ?? realInteractions.length;
+  const contestadas = campaign?.responded_count ?? realInteractions.filter((i) => i.status === "COMPLETED" || i.status === "IN_PROGRESS").length;
+  const completadas = campaign?.completed_count ?? realInteractions.filter((i) => i.status === "COMPLETED").length;
+  const fallidas = Math.max(0, intentados - contestadas);
   const pendientes = Math.max(0, (campaign?.audience_count || totalTargets || 0) - intentados);
 
   return {
