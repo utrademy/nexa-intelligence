@@ -227,7 +227,11 @@ export function AiCharacterizationCard({
           if (!statusRes.ok) return;
           const statusData = await statusRes.json();
 
-          if (statusData.status === "in-progress") {
+          if (statusData.status === "failed" || statusData.status === "error" || (statusData.completed && statusData.error)) {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            setVoiceCallStatus("failed");
+            setVoiceError(statusData.error || "Llamada no completada o rechazada.");
+          } else if (statusData.status === "in-progress") {
             setVoiceCallStatus("in-progress");
           } else if (statusData.completed || statusData.dbUpdated) {
             setVoiceCallStatus("processing");
@@ -247,10 +251,6 @@ export function AiCharacterizationCard({
               setVoiceResult(completedEvt);
               if (onRealVoiceComplete) onRealVoiceComplete(completedEvt);
             }, 1200);
-          } else if (statusData.status === "failed" || statusData.status === "error") {
-            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-            setVoiceCallStatus("failed");
-            setVoiceError(statusData.error || "Llamada no completada o rechazada.");
           }
         } catch {
           // continue polling

@@ -323,10 +323,17 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
     const data = await res.json();
     const status = data.status || "in-progress";
     const completed = status === "ended" || status === "completed";
+    const isError =
+      status === "error" ||
+      data.endedReason === "call.start.error-get-transport" ||
+      data.endedReason?.includes("error");
+
+    const errorMsg = data.endedMessage || data.error || (isError ? `Fallo de telefonía: ${data.endedReason}` : undefined);
 
     return {
-      status,
+      status: isError ? "failed" : status,
       completed,
+      error: errorMsg,
     };
   }
 

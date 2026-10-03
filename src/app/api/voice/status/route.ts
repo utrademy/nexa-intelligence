@@ -43,6 +43,7 @@ export async function GET(request: Request) {
       completed: statusData.completed || dbUpdated,
       dbUpdated,
       newScore,
+      error: statusData.error,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Error al consultar estado" }, { status: 500 });
