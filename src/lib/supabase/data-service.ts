@@ -40,6 +40,7 @@ export function mapDbPersonToPerson(db: DatabasePerson, campStatus?: CampaignSta
     },
     memberSince: db.member_since || 2018,
     segment: db.segment || "Ahorro tradicional",
+    contactable: db.contactable ?? true,
   };
 }
 

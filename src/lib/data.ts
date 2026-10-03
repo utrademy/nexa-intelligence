@@ -1,25 +1,32 @@
 import * as campaigns from "./mock/campaigns";
-import * as dashboard from "./mock/dashboard";
 import * as knowledge from "./mock/knowledge";
-import { FILTER_OPTIONS, PEOPLE, TOTAL_POPULATION } from "./mock/people";
+import { FILTER_OPTIONS, PEOPLE } from "./mock/people";
 import { buildProfile } from "./mock/profiles";
 import { fetchCampaignsFromDb, fetchPeopleFromDb, fetchPersonProfileFromDb } from "./supabase/data-service";
 import { getRealIndexedCount, getRealKnowledgeDocuments } from "./knowledge/db";
+import { getDashboardAnalytics } from "./analytics/dashboard";
 
 // Data access layer.
-// Connects to Supabase PostgreSQL with seamless fallback to mock data
-// if the database has not yet been initialized or credentials are missing.
+// Connects to Supabase PostgreSQL with real analytics calculations.
 
 export async function getDashboardData() {
+  const analytics = await getDashboardAnalytics();
   return {
-    kpis: dashboard.DASHBOARD_KPIS,
-    coverage: dashboard.COVERAGE_BREAKDOWN,
-    coverageByDimension: dashboard.COVERAGE_BY_DIMENSION,
-    age: dashboard.AGE_DISTRIBUTION,
-    geo: dashboard.GEO_DISTRIBUTION,
-    employment: dashboard.EMPLOYMENT_DISTRIBUTION,
-    trend: dashboard.COMPLETENESS_TREND,
-    insights: dashboard.AI_INSIGHTS,
+    kpis: analytics.kpis,
+    coverage: analytics.coverage,
+    coverageByDimension: analytics.coverageByDimension,
+    age: analytics.age,
+    geo: analytics.geo,
+    employment: analytics.employment,
+    completenessDistribution: analytics.completenessDistribution,
+    insights: analytics.aiFindings,
+    totalProfiles: analytics.totalProfiles,
+    contactableProfiles: analytics.contactableProfiles,
+    contactablePercentage: analytics.contactablePercentage,
+    averageCharacterization: analytics.averageCharacterization,
+    criticalGapProfiles: analytics.criticalGapProfiles,
+    profilesUpdatedByAI: analytics.profilesUpdatedByAI,
+    santanderPercentage: analytics.santanderPercentage,
     campaigns: campaigns.CAMPAIGNS,
   };
 }
@@ -27,7 +34,7 @@ export async function getDashboardData() {
 export async function getPeople() {
   const dbData = await fetchPeopleFromDb();
   if (dbData && dbData.people.length > 0) {
-    console.log(`[data] Loaded ${dbData.people.length} people from Supabase`);
+    console.log(`[data] Loaded ${dbData.people.length} people from Supabase (Total: ${dbData.total})`);
     const locations = Array.from(new Set(dbData.people.map((p) => p.city))).filter(Boolean);
     const filterOptions = {
       ...FILTER_OPTIONS,
@@ -35,7 +42,7 @@ export async function getPeople() {
     };
     return {
       people: dbData.people,
-      total: TOTAL_POPULATION,
+      total: dbData.total,
       filterOptions,
       fromDatabase: true,
     };
@@ -44,7 +51,7 @@ export async function getPeople() {
   console.warn("[data] Fallback: using mock people because Supabase returned no data");
   return {
     people: PEOPLE,
-    total: TOTAL_POPULATION,
+    total: PEOPLE.length,
     filterOptions: FILTER_OPTIONS,
     fromDatabase: false,
   };

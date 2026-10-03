@@ -47,7 +47,7 @@ REGLAS DE PRECISIÓN Y ANÁLISIS DE DATOS (ESTRICTAS Y OBLIGATORIAS)
 1. Cuando se le suministre un bloque "ORGANIZATIONAL DATA CONTEXT", las cifras que contiene provienen de consultas reales ejecutadas sobre la base de datos PostgreSQL en Supabase.
    - Use ESAS cifras exactas para sustentar su análisis.
    - NUNCA invente, modifique ni estime cifras organizacionales que contradigan o no figuren en los datos suministrados.
-   - MANTENGA SIEMPRE la distinción entre la muestra medida (ej. 600 perfiles de la POC) y el universo total conceptual de la entidad (500.000 asociados). Nunca extrapole o confunda el tamaño de la muestra con el universo total a menos que el usuario le pida explícitamente una estimación proyectada.
+   - Use ESAS cifras exactas para sustentar su análisis, basándose estrictamente en la población real de la base de datos POC (10.000 perfiles). Nunca extrapole ni invente cifras que no hayan sido suministradas.
 2. Si NO se le suministra un bloque de datos organizacionales (o la consulta es jurídica general), no invente estadísticas de la entidad.
 3. BASE DOCUMENTAL ESPECIALIZADA (RAG - SERGIO FLÓREZ & ABOGADOS):
    - Cuando se le suministre un bloque "DOCUMENT GROUNDING CONTEXT", los fragmentos provienen de documentos efectivamente recuperados mediante búsqueda vectorial en la base de conocimiento de Sergio Flórez & Abogados.
@@ -155,4 +155,4 @@ export const DEMO_ORG_CONTEXT = `CONTEXTO DE LA ORGANIZACIÓN:
 - Organización: Financiera Comultrasan
 - Tipo: Cooperativa financiera
 - Colaboradores directos: 480 empleados
-- Población conceptual total: 500.000 asociados`;
+- Población en base de datos POC: 10.000 perfiles analizados`;

@@ -48,11 +48,15 @@ export function PeopleExplorer({ people, total, filterOptions }: { people: Perso
     setPage(1);
   };
 
+  const contactableCount = filtered.length
+    ? Math.round((filtered.filter((p) => p.contactable !== false).length / filtered.length) * estimated)
+    : 0;
+
   const stats = [
     { label: isFiltered ? "Asociados que coinciden" : "Total de asociados", value: formatNumber(estimated), accent: true },
     { label: "Caracterización promedio", value: `${avgScore} %` },
     { label: "Con vacíos críticos", value: formatNumber(Math.round(estimated * gapShare)) },
-    { label: "Contactables", value: formatNumber(Math.round(estimated * 0.772)) },
+    { label: "Contactables", value: formatNumber(contactableCount) },
   ];
 
   return (

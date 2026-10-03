@@ -45,7 +45,12 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <h2 className="text-[28px] leading-tight font-semibold tracking-tight">Buenos días</h2>
-                <div className="text-[15px] font-medium text-indigo-200">Financiera Comultrasan</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[15px] font-medium text-indigo-200">Financiera Comultrasan</span>
+                  <span className="rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-[10.5px] font-medium text-indigo-100">
+                    Entorno POC · datos sintéticos
+                  </span>
+                </div>
               </div>
             </div>
             <p className="mt-1 text-[14px] text-slate-400">Inteligencia integral de su población</p>
@@ -68,8 +73,9 @@ export default async function DashboardPage() {
                 <Sparkles className="h-4 w-4" />
               </div>
               <p className="text-[13px] leading-relaxed text-slate-300">
-                La cobertura creció <span className="font-semibold text-white">9 puntos</span> este año. Las campañas con IA actualizaron{" "}
-                <span className="font-semibold text-white">1.204 perfiles</span> este mes, principalmente con información laboral y del hogar.
+                Muestra analizada de <span className="font-semibold text-white">{formatNumber(data.totalProfiles)} perfiles</span> en Supabase.{" "}
+                <span className="font-semibold text-white">{formatNumber(data.profilesUpdatedByAI)} perfiles</span> enriquecidos con IA y{" "}
+                <span className="font-semibold text-white">{formatNumber(data.contactableProfiles)} personas contactables</span>.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -95,26 +101,24 @@ export default async function DashboardPage() {
       <section className="grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Evolución de la completitud de perfiles"
-            subtitle="Caracterización promedio de la población · últimos 12 meses"
+            title="Distribución de completitud de perfiles"
+            subtitle={`Nivel de caracterización en la muestra real POC · ${formatNumber(data.totalProfiles)} perfiles`}
             action={
               <ChartLegend
                 items={[
-                  { name: "Completitud", color: "#6366f1" },
-                  { name: "Actualizado por IA", color: "#06b6d4" },
+                  { name: "Perfiles", color: "#6366f1" },
                 ]}
               />
             }
           />
           <div className="px-4 pt-4 pb-4">
-            <AreaSeriesChart
-              data={data.trend}
-              xKey="month"
-              unit="%"
+            <BarSeriesChart
+              data={data.completenessDistribution}
+              xKey="bucket"
+              unit=" perfiles"
               height={280}
               series={[
-                { key: "completeness", name: "Completitud", color: "#6366f1" },
-                { key: "aiUpdated", name: "Actualizado por IA", color: "#06b6d4" },
+                { key: "members", name: "Perfiles", color: "#6366f1" },
               ]}
             />
           </div>
@@ -125,13 +129,13 @@ export default async function DashboardPage() {
           <CardHeader
             title={
               <span className="flex items-center gap-2">
-                Hallazgos de IA
-                <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-600 ring-1 ring-inset ring-indigo-600/10">
-                  <BrainCircuit className="h-3 w-3" /> EN VIVO
+                Hallazgos Analíticos
+                <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
+                  <BrainCircuit className="h-3 w-3" /> DATOS REALES
                 </span>
               </span>
             }
-            subtitle="Generado mediante análisis de datos de la organización"
+            subtitle="Generado a partir de datos reales de la muestra POC"
           />
           <div className="scrollbar-thin max-h-[330px] space-y-2.5 overflow-y-auto px-5 pt-4 pb-5">
             {data.insights.map((ins) => (
@@ -143,9 +147,9 @@ export default async function DashboardPage() {
 
       <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         <Card>
-          <CardHeader title="Cobertura de caracterización" subtitle="500.000 asociados" />
+          <CardHeader title="Cobertura de caracterización" subtitle={`${formatNumber(data.totalProfiles)} perfiles analizados`} />
           <div className="px-6 pt-2 pb-6">
-            <DonutChart data={data.coverage} centerValue="68 %" centerLabel="Cobertura" height={210} />
+            <DonutChart data={data.coverage} centerValue={`${data.averageCharacterization} %`} centerLabel="Promedio" height={210} />
             <div className="mt-4 space-y-2.5">
               {data.coverage.map((c) => (
                 <div key={c.name} className="flex items-center justify-between text-[13px]">
@@ -161,27 +165,33 @@ export default async function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Cobertura por dimensión" subtitle="Dónde falta información en los perfiles" />
+          <CardHeader title="Cobertura por dimensión" subtitle="Disponibilidad fáctica de información en la muestra" />
           <div className="space-y-3.5 px-6 pt-5 pb-6">
             {data.coverageByDimension.map((d) => (
               <div key={d.dimension}>
                 <div className="mb-1.5 flex items-center justify-between text-[13px]">
                   <span className="font-medium text-slate-700">{d.dimension}</span>
-                  <span className="font-semibold text-slate-900 tabular-nums">{d.coverage} %</span>
+                  <span className="font-semibold text-slate-900 tabular-nums">
+                    {d.note ? (
+                      <span className="text-[11px] font-normal text-slate-400">{d.note}</span>
+                    ) : (
+                      `${d.coverage} %`
+                    )}
+                  </span>
                 </div>
                 <ProgressBar value={d.coverage} className="h-2" />
               </div>
             ))}
             <div className="mt-2 rounded-xl bg-amber-50/70 p-3 text-[12.5px] leading-relaxed text-amber-800 ring-1 ring-inset ring-amber-600/10">
-              Las dimensiones de inclusión e información social están por debajo del 50 %. Se recomienda priorizarlas en la próxima campaña con IA.
+              Muestra real POC: Las dimensiones de datos personales, información laboral y educación cuentan con amplia cobertura fáctica.
             </div>
           </div>
         </Card>
 
         <Card className="lg:col-span-2 xl:col-span-1">
-          <CardHeader title="Situación laboral" subtitle="Reportada e inferida" />
+          <CardHeader title="Situación laboral" subtitle="Calculada directamente desde PostgreSQL" />
           <div className="px-6 pt-2 pb-6">
-            <DonutChart data={data.employment} centerValue={formatCompact(totalEmployment)} centerLabel="Asociados" height={210} />
+            <DonutChart data={data.employment} centerValue={formatCompact(totalEmployment)} centerLabel="Perfiles" height={210} />
             <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2.5">
               {data.employment.map((e) => (
                 <div key={e.name} className="flex items-center justify-between text-[12.5px]">
@@ -201,7 +211,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader
             title="Población por edad"
-            subtitle="Asociados y caracterización promedio por rango de edad"
+            subtitle={`Asociados por rango de edad · Muestra POC de ${formatNumber(data.totalProfiles)} perfiles`}
             action={<ChartLegend items={[{ name: "Asociados", color: "#6366f1" }]} />}
           />
           <div className="px-4 pt-4 pb-4">
@@ -211,7 +221,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader
             title="Distribución geográfica"
-            subtitle="Asociados por municipio · Santander concentra el 74 %"
+            subtitle={`Asociados por municipio · Santander concentra el ${data.santanderPercentage} % de la muestra`}
             action={<ChartLegend items={[{ name: "Asociados", color: "#8b5cf6" }]} />}
           />
           <div className="px-4 pt-4 pb-4">
@@ -222,8 +232,8 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader
-          title="Campañas recientes con IA"
-          subtitle="Caracterización automatizada mediante llamadas con IA, WhatsApp, SMS y formularios seguros"
+          title="Campañas con IA"
+          subtitle="Escenario demostrativo · Simulación de metas sobre población POC"
           action={
             <Link href="/campaigns" className={buttonClasses("secondary", "sm")}>
               Ver todas

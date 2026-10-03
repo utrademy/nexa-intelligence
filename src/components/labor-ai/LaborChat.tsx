@@ -427,10 +427,10 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
               </div>
             </div>
             {[
-              { label: "Asociados", value: "500.000" },
-              { label: "Cobertura de caracterización", value: "68 %" },
-              { label: "Cobertura de información de inclusión", value: "34 %" },
-              { label: "Campañas con IA activas", value: "2" },
+              { label: "Perfiles en base de datos", value: "10.000" },
+              { label: "Completitud promedio", value: "85,5 %" },
+              { label: "Perfiles contactables", value: "95,6 %" },
+              { label: "Vacíos críticos de información", value: "543" },
             ].map((r) => (
               <div key={r.label} className="flex items-center justify-between gap-3 text-[12.5px]">
                 <span className="text-slate-500">{r.label}</span>

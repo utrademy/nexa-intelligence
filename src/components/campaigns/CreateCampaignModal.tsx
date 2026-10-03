@@ -53,7 +53,7 @@ export function CreateCampaignModal({
 
   const audience = presets.find((p) => p.id === audienceId) ?? presets[0];
   const toggle = <T,>(list: T[], item: T) => (list.includes(item) ? list.filter((i) => i !== item) : [...list, item]);
-  const lift = Math.max(0.1, ((audience.size * 0.58) / 500000) * 100 * (fields.length / 34));
+  const lift = Math.max(0.1, ((audience.size * 0.58) / 10000) * 100 * (fields.length / 34));
 
   const close = () => {
     onClose();

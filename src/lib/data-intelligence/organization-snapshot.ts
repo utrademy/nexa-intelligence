@@ -214,7 +214,7 @@ export async function getOrganizationIntelligenceSnapshot(): Promise<Organizatio
         organizationName: orgData?.name || "Financiera Comultrasan",
         organizationType: orgData?.type || "Cooperativa financiera",
         internalEmployees: 480,
-        conceptualTotalPopulation: 500000,
+        conceptualTotalPopulation: sampleSize,
         generatedAt: new Date().toISOString(),
       },
       contactability: {
@@ -271,7 +271,7 @@ export function formatSnapshotForPrompt(snapshot: OrganizationSnapshot): string 
 ================================================================================
 INSTITUCIÓN: ${d.organizationName} (${d.organizationType})
 EMPLEADOS DIRECTOS / INTERNOS: ${d.internalEmployees} colaboradores
-POBLACIÓN CONCEPTUAL ASOCIADA (UNIVERSO DE LA ENTIDAD): ${d.conceptualTotalPopulation.toLocaleString("es-CO")} asociados
+POBLACIÓN ANALIZADA EN BASE DE DATOS: ${d.sampleSize} perfiles
 TIPO DE DATASET ANALIZADO: Muestra sintética para Prueba de Concepto (POC)
 TAMAÑO REAL DE LA MUESTRA EN BASE DE DATOS: ${d.sampleSize} perfiles
 FECHA Y HORA DEL CÁLCULO: ${d.generatedAt}
@@ -279,7 +279,7 @@ FECHA Y HORA DEL CÁLCULO: ${d.generatedAt}
 REGLAS OBLIGATORIAS DE INTERPRETACIÓN:
 1. Las siguientes cifras son MEDICIONES EXACTAS Y FÁCTICAS calculadas directamente desde PostgreSQL en Supabase sobre la muestra de ${d.sampleSize} perfiles.
 2. NUNCA altere ni invente estos números.
-3. NUNCA confunda la muestra analizada (${d.sampleSize} perfiles) con el universo total de la entidad (${d.conceptualTotalPopulation.toLocaleString("es-CO")} asociados). Indique claramente que el análisis corresponde a la muestra POC de ${d.sampleSize} perfiles.
+3. El análisis corresponde estrictamente a la muestra POC de ${d.sampleSize} perfiles registrados en Supabase.
 
 MÉTRICAS EXACTAS CALCULADAS:
 --------------------------------------------------------------------------------

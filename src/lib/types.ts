@@ -52,6 +52,7 @@ export interface Person {
   lastInteraction: { date: string; channel: Channel | "branch" | "app" };
   memberSince: number;
   segment: string;
+  contactable?: boolean;
 }
 
 export type FieldSource = "Core financiero" | "Vinculación en oficina" | "App móvil" | "Llamada con IA" | "WhatsApp" | "SMS" | "Formulario seguro";
