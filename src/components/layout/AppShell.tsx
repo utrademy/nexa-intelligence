@@ -23,9 +23,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 max-w-full flex-1 flex-col overflow-x-hidden">
         <Header onMenu={() => setMobileOpen(true)} />
-        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="flex-1 min-w-0 max-w-full px-3 py-4 sm:px-4 sm:py-6 lg:px-8 lg:py-8 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

@@ -79,8 +79,8 @@ export function DonutChart({
   height?: number;
 }) {
   return (
-    <div className="relative" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="relative w-full min-w-0 max-w-full overflow-hidden" style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <PieChart>
           <Tooltip content={(p) => <ChartTooltip {...p} />} />
           <Pie data={data} dataKey="value" nameKey="name" innerRadius="70%" outerRadius="94%" paddingAngle={2} stroke="none" cornerRadius={6}>
@@ -119,8 +119,8 @@ export function BarSeriesChart({
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   return (
-    <div style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div style={{ height }} className="w-full min-w-0 max-w-full overflow-hidden">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart data={data} layout={horizontal ? "vertical" : "horizontal"} margin={{ top: 8, right: 8, left: horizontal ? 8 : -12, bottom: 0 }} barGap={4}>
           <defs>
             {series.map((s) => (
@@ -178,8 +178,8 @@ export function AreaSeriesChart({
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   return (
-    <div style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div style={{ height }} className="w-full min-w-0 max-w-full overflow-hidden">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <AreaChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
           <defs>
             {series.map((s) => (
@@ -227,8 +227,8 @@ export function LineSeriesChart({
   domain?: [number, number];
 }) {
   return (
-    <div style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
+    <div style={{ height }} className="w-full min-w-0 max-w-full overflow-hidden">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <LineChart data={data} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
           <CartesianGrid stroke="#eef2f7" vertical={false} />
           <XAxis dataKey={xKey} tick={AXIS} axisLine={false} tickLine={false} />

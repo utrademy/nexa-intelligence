@@ -11,10 +11,10 @@ export function CampaignCard({ campaign }: { campaign: AiCampaign }) {
   return (
     <Link
       href="/campaigns"
-      className="group block rounded-xl border border-slate-200/70 bg-white p-4 transition hover:border-slate-300 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.18)]"
+      className="group block min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200/70 bg-white p-4 transition hover:border-slate-300 hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.18)]"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="truncate text-[14px] font-semibold text-slate-900 group-hover:text-indigo-700">{campaign.name}</div>
           <div className="mt-0.5 line-clamp-1 text-[12.5px] text-slate-500">{campaign.objective}</div>
         </div>
@@ -32,14 +32,14 @@ export function CampaignCard({ campaign }: { campaign: AiCampaign }) {
       </div>
       <ProgressBar value={completion} className="mt-2" barClassName="bg-linear-to-r from-indigo-500 to-cyan-500" />
       <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-1">
+        <div className="flex shrink-0 gap-1">
           {campaign.channels.map((c) => (
             <ChannelBadge key={c} channel={c} compact />
           ))}
         </div>
-        <span className="flex items-center gap-1 text-[12px] text-slate-400">
-          <CalendarDays className="h-3.5 w-3.5" />
-          {formatDate(campaign.startDate)} – {formatDate(campaign.endDate)}
+        <span className="flex items-center gap-1 text-[11.5px] text-slate-400 sm:text-[12px]">
+          <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+          <span>{formatDate(campaign.startDate)} – {formatDate(campaign.endDate)}</span>
         </span>
       </div>
     </Link>

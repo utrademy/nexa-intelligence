@@ -28,6 +28,7 @@ function fail(status: number, message = LABOR_AI_ERROR_MESSAGE) {
 }
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function parseBody(body: unknown) {
   if (!body || typeof body !== "object") return null;
@@ -145,7 +146,7 @@ export async function POST(request: Request) {
             (c, i) =>
               `[DOCUMENTO ${i + 1}] "${c.documentTitle}" (${c.sourceName || "Documento normativo"}${
                 c.pageNumber ? ` · Página ${c.pageNumber}` : ""
-              })\n${c.content}`
+              })\n${c.content.length > 2000 ? c.content.slice(0, 2000) + "…" : c.content}`
           )
           .join("\n\n");
 

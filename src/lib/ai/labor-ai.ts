@@ -6,8 +6,8 @@ export const LABOR_AI_LIMITS = {
   questionChars: 4000,
   historyTurns: 10,
   historyChars: 8000,
-  maxOutputTokens: 4000,
-  timeoutMs: 90_000,
+  maxOutputTokens: 2500,
+  timeoutMs: 55_000,
 };
 
 export const LABOR_AI_ERROR_MESSAGE = "No fue posible generar el análisis en este momento. Inténtelo nuevamente.";

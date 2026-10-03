@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const totalEmployment = data.employment.reduce((s, e) => s + e.value, 0);
 
   return (
-    <div className="mx-auto max-w-[1440px] space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1440px] space-y-6">
       <section className="relative animate-fade-in overflow-hidden rounded-3xl border border-slate-200/70 bg-ink-900 px-7 py-7 text-white lg:px-9">
         <div className="bg-grid absolute inset-0 opacity-40 [mask-image:linear-gradient(to_left,black,transparent_70%)]" />
         <div className="absolute -top-28 right-10 h-72 w-72 rounded-full bg-indigo-600/30 blur-[90px]" />
@@ -207,30 +207,30 @@ export default async function DashboardPage() {
         </Card>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <Card>
+      <section className="grid w-full min-w-0 gap-6 lg:grid-cols-2">
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader
             title="Población por edad"
             subtitle={`Asociados por rango de edad · Muestra POC de ${formatNumber(data.totalProfiles)} perfiles`}
             action={<ChartLegend items={[{ name: "Asociados", color: "#6366f1" }]} />}
           />
-          <div className="px-4 pt-4 pb-4">
+          <div className="min-w-0 px-2 pt-4 pb-4 sm:px-4">
             <BarSeriesChart data={data.age} xKey="range" height={260} series={[{ key: "members", name: "Asociados", color: "#6366f1" }]} />
           </div>
         </Card>
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader
             title="Distribución geográfica"
             subtitle={`Asociados por municipio · Santander concentra el ${data.santanderPercentage} % de la muestra`}
             action={<ChartLegend items={[{ name: "Asociados", color: "#8b5cf6" }]} />}
           />
-          <div className="px-4 pt-4 pb-4">
+          <div className="min-w-0 px-2 pt-4 pb-4 sm:px-4">
             <BarSeriesChart data={data.geo} xKey="region" horizontal height={260} series={[{ key: "members", name: "Asociados", color: "#8b5cf6" }]} />
           </div>
         </Card>
       </section>
 
-      <Card>
+      <Card className="min-w-0 overflow-hidden">
         <CardHeader
           title="Campañas con IA"
           subtitle="Escenario demostrativo · Simulación de metas sobre población POC"
@@ -241,7 +241,7 @@ export default async function DashboardPage() {
             </Link>
           }
         />
-        <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid w-full min-w-0 gap-4 p-4 sm:p-6 md:grid-cols-2 xl:grid-cols-4">
           {data.campaigns.map((c) => (
             <CampaignCard key={c.id} campaign={c} />
           ))}
