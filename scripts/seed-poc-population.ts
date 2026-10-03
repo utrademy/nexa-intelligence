@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 
 // Ensure SSL connections work behind proxies if needed
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -14,7 +15,7 @@ const SUPABASE_ANON_KEY =
   "sb_publishable_k2K3LJXLM3Bj-2p_X_nQIA_weSNhXcf";
 
 const ORGANIZATION_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
-const TARGET_POPULATION = 10000;
+const TARGET_POPULATION = 23746;
 const BATCH_SIZE = 500;
 
 // Seeded PRNG (Mulberry32) for reproducible synthetic data
@@ -130,12 +131,7 @@ const OCCUPATIONS_INDEPENDIENTE = [
 ];
 
 function generateUuid(): string {
-  // RFC4122 v4 UUID with seeded PRNG
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (rand() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  return randomUUID();
 }
 
 function cleanAccents(text: string): string {
@@ -145,7 +141,7 @@ function cleanAccents(text: string): string {
 async function runSeed() {
   console.log("==================================================");
   console.log("NEXA INTELLIGENCE — EXPAND SYNTHETIC POC DATASET");
-  console.log("Target Population: 10,000 synthetic people");
+  console.log(`Target Population: ${TARGET_POPULATION.toLocaleString("es-CO")} synthetic people`);
   console.log("==================================================");
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -175,18 +171,27 @@ async function runSeed() {
 
   console.log(`Generating: ${needed}`);
 
-  // Fetch existing document numbers to prevent any potential collision
-  const { data: existingDocs } = await supabase.from("people").select("document_number");
+  // Fetch all existing document numbers to prevent any potential collision
   const usedDocNumbers = new Set<string>();
-  if (existingDocs) {
-    for (const d of existingDocs) {
+  let docFrom = 0;
+  const docPageSize = 1000;
+  while (true) {
+    const { data: docChunk, error: docErr } = await supabase
+      .from("people")
+      .select("document_number")
+      .range(docFrom, docFrom + docPageSize - 1);
+    if (docErr || !docChunk || docChunk.length === 0) break;
+    for (const d of docChunk) {
       if (d.document_number) usedDocNumbers.add(d.document_number);
     }
+    if (docChunk.length < docPageSize) break;
+    docFrom += docPageSize;
   }
+  console.log(`Indexed ${usedDocNumbers.size} existing document numbers.`);
 
   // Generate synthetic records
   const newRecords: any[] = [];
-  let docSeed = 10_000_000 + (currentCount || 0) * 17;
+  let docSeed = 100_000_000 + (currentCount || 0) * 17;
 
   for (let i = 0; i < needed; i++) {
     const isFemale = rand() > 0.49;
@@ -413,7 +418,7 @@ async function printVerification(supabase: any) {
   while (true) {
     const { data, error } = await supabase
       .from("people")
-      .select("age, city, department, employment_status, education_level, characterization_score, profile_status, contactable")
+      .select("age, city, department, employment_status, education_level, occupation, phone, email, characterization_score, profile_status, contactable")
       .range(from, from + pageSize - 1);
 
     if (error) {
@@ -432,11 +437,20 @@ async function printVerification(supabase: any) {
 
   let contactableCount = 0;
   let scoreSum = 0;
+  let completeProfiles = 0;
+  let incompleteProfiles = 0;
   let criticalGapsCount = 0;
-  let missingEmploymentCount = 0;
-  let missingEducationCount = 0;
+
+  const missingFields: Record<string, number> = {
+    occupation: 0,
+    email: 0,
+    employment_status: 0,
+    education_level: 0,
+    phone: 0,
+  };
 
   const employmentDist: Record<string, number> = {};
+  const educationDist: Record<string, number> = {};
   const statusDist: Record<string, number> = {};
   const cityDist: Record<string, number> = {};
   const ageDist = {
@@ -452,14 +466,26 @@ async function printVerification(supabase: any) {
     if (p.contactable) contactableCount++;
     const s = p.characterization_score || 0;
     scoreSum += s;
+
+    if (p.profile_status === "Completo" || p.profile_status === "Actualizado por IA") {
+      completeProfiles++;
+    } else {
+      incompleteProfiles++;
+    }
+
     if (p.profile_status === "Vacíos críticos" || s < 50) criticalGapsCount++;
 
     const emp = p.employment_status || "Sin información";
     employmentDist[emp] = (employmentDist[emp] || 0) + 1;
-    if (emp === "Sin información") missingEmploymentCount++;
+    if (emp === "Sin información") missingFields.employment_status++;
 
     const edu = p.education_level || "Sin información";
-    if (edu === "Sin información") missingEducationCount++;
+    educationDist[edu] = (educationDist[edu] || 0) + 1;
+    if (edu === "Sin información") missingFields.education_level++;
+
+    if (!p.occupation || p.occupation === "Sin información") missingFields.occupation++;
+    if (!p.email) missingFields.email++;
+    if (!p.phone) missingFields.phone++;
 
     const st = p.profile_status || "Parcial";
     statusDist[st] = (statusDist[st] || 0) + 1;
@@ -479,36 +505,39 @@ async function printVerification(supabase: any) {
   const avgScore = total > 0 ? (scoreSum / total).toFixed(1) : "0";
   const contactablePct = total > 0 ? ((contactableCount / total) * 100).toFixed(1) : "0";
   const criticalGapsPct = total > 0 ? ((criticalGapsCount / total) * 100).toFixed(1) : "0";
-  const missingEmpPct = total > 0 ? ((missingEmploymentCount / total) * 100).toFixed(1) : "0";
-  const missingEduPct = total > 0 ? ((missingEducationCount / total) * 100).toFixed(1) : "0";
 
-  console.log(`\n--- GENERAL METRICS ---`);
-  console.log(`Contactable: ${contactableCount} (${contactablePct} %)`);
-  console.log(`Average Characterization Score: ${avgScore} %`);
-  console.log(`Profiles with Critical Gaps: ${criticalGapsCount} (${criticalGapsPct} %)`);
-  console.log(`Missing Employment: ${missingEmploymentCount} (${missingEmpPct} %)`);
-  console.log(`Missing Education: ${missingEducationCount} (${missingEduPct} %)`);
+  console.log(`\n--- REQUIRED OBJECTIVE METRICS ---`);
+  console.log(`TOTAL POPULATION: ${total}`);
+  console.log(`AVERAGE CHARACTERIZATION: ${avgScore}%`);
+  console.log(`COMPLETE PROFILES: ${completeProfiles}`);
+  console.log(`INCOMPLETE PROFILES: ${incompleteProfiles}`);
 
-  console.log(`\n--- PROFILE STATUS DISTRIBUTION ---`);
-  for (const [st, cnt] of Object.entries(statusDist)) {
-    console.log(`  ${st}: ${cnt} (${((cnt / total) * 100).toFixed(1)} %)`);
+  console.log(`\nTOP 5 MISSING FIELDS:`);
+  const sortedMissing = Object.entries(missingFields).sort((a, b) => b[1] - a[1]);
+  for (const [fKey, cnt] of sortedMissing.slice(0, 5)) {
+    console.log(`  - ${fKey}: ${cnt} missing (${((cnt / total) * 100).toFixed(1)}%)`);
   }
 
-  console.log(`\n--- EMPLOYMENT DISTRIBUTION ---`);
-  for (const [emp, cnt] of Object.entries(employmentDist)) {
-    console.log(`  ${emp}: ${cnt} (${((cnt / total) * 100).toFixed(1)} %)`);
-  }
-
-  console.log(`\n--- AGE DISTRIBUTION ---`);
-  for (const [bracket, cnt] of Object.entries(ageDist)) {
-    console.log(`  ${bracket}: ${cnt} (${((cnt / total) * 100).toFixed(1)} %)`);
-  }
-
-  console.log(`\n--- TOP MUNICIPALITIES ---`);
+  console.log(`\nTOP 5 MUNICIPALITIES:`);
   const sortedCities = Object.entries(cityDist).sort((a, b) => b[1] - a[1]);
-  for (const [city, cnt] of sortedCities.slice(0, 10)) {
-    console.log(`  ${city}: ${cnt} (${((cnt / total) * 100).toFixed(1)} %)`);
+  for (const [city, cnt] of sortedCities.slice(0, 5)) {
+    console.log(`  - ${city}: ${cnt} (${((cnt / total) * 100).toFixed(1)}%)`);
   }
+
+  console.log(`\nEMPLOYMENT DISTRIBUTION:`);
+  for (const [emp, cnt] of Object.entries(employmentDist).sort((a, b) => b[1] - a[1])) {
+    console.log(`  - ${emp}: ${cnt} (${((cnt / total) * 100).toFixed(1)}%)`);
+  }
+
+  console.log(`\nEDUCATION DISTRIBUTION:`);
+  for (const [edu, cnt] of Object.entries(educationDist).sort((a, b) => b[1] - a[1])) {
+    console.log(`  - ${edu}: ${cnt} (${((cnt / total) * 100).toFixed(1)}%)`);
+  }
+
+  console.log(`\n--- ADDITIONAL CONTEXT ---`);
+  console.log(`Contactable: ${contactableCount} (${contactablePct}%)`);
+  console.log(`Profiles with Critical Gaps: ${criticalGapsCount} (${criticalGapsPct}%)`);
+  console.log(`Profile Statuses:`, statusDist);
   console.log("==================================================");
 }
 

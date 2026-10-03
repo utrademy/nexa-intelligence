@@ -3,7 +3,7 @@ import * as knowledge from "./mock/knowledge";
 import { FILTER_OPTIONS, PEOPLE } from "./mock/people";
 import { buildProfile } from "./mock/profiles";
 import { fetchCampaignsFromDb, fetchPeopleFromDb, fetchPersonProfileFromDb } from "./supabase/data-service";
-import { getCampaignFeedInteractions } from "./campaigns/campaign-service";
+import { getCampaignFeedInteractions, getRealSegmentCount } from "./campaigns/campaign-service";
 import { getRealIndexedCount, getRealKnowledgeDocuments } from "./knowledge/db";
 import { getDashboardAnalytics } from "./analytics/dashboard";
 
@@ -127,12 +127,19 @@ export async function getCampaignData() {
   const primaryCampaign = campaignList[0] || campaigns.FEATURED_CAMPAIGN;
   const mergedInteractions = feedInteractions.length > 0 ? feedInteractions : campaigns.CAMPAIGN_INTERACTIONS;
 
-  // Real presets computed dynamically
+  // Real presets computed dynamically from live database
+  const [sizeAll, sizeCritical, sizeLt70, sizeLt85] = await Promise.all([
+    getRealSegmentCount({ incompletenessFilter: "all_incomplete" }),
+    getRealSegmentCount({ incompletenessFilter: "critical_gaps" }),
+    getRealSegmentCount({ incompletenessFilter: "score_lt_70" }),
+    getRealSegmentCount({ incompletenessFilter: "score_lt_85" }),
+  ]);
+
   const audiencePresets = [
-    { id: "all_incomplete", name: "Población con caracterización incompleta", description: "Asociados con puntaje de caracterización menor a 100%", size: 10000 },
-    { id: "critical", name: "Vacíos críticos — Santander", description: "Perfiles prioritarios con vacíos críticos de información", size: 543 },
-    { id: "score_lt_70", name: "Puntaje bajo (< 70%)", description: "Asociados que requieren enriquecimiento integral", size: 1137 },
-    { id: "score_lt_85", name: "Puntaje medio (< 85%)", description: "Asociados con información básica pero sin datos laborales", size: 3624 },
+    { id: "all_incomplete", name: "Población con caracterización incompleta", description: "Asociados con puntaje de caracterización menor a 100%", size: sizeAll },
+    { id: "critical", name: "Vacíos críticos — Santander", description: "Perfiles prioritarios con vacíos críticos de información", size: sizeCritical },
+    { id: "score_lt_70", name: "Puntaje bajo (< 70%)", description: "Asociados que requieren enriquecimiento integral", size: sizeLt70 },
+    { id: "score_lt_85", name: "Puntaje medio (< 85%)", description: "Asociados con información básica pero sin datos laborales", size: sizeLt85 },
   ];
 
   return {
