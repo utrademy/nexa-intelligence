@@ -53,6 +53,26 @@ export async function POST(request: Request) {
       });
     }
 
+    // 2.1 Handle tool calls from Vapi (e.g. saveCharacterizationData, endCall)
+    if (type === "tool-calls" || type === "function-call") {
+      const toolCalls = message.toolCallList || message.toolCalls || [message.toolCall].filter(Boolean);
+      const results = (toolCalls || []).map((tc: any) => {
+        const fnName = tc.function?.name || tc.name;
+        const resultMsg =
+          fnName === "endCall"
+            ? "Llamada finalizada correctamente."
+            : "Datos registrados correctamente.";
+        return {
+          name: fnName,
+          toolCallId: tc.id,
+          result: resultMsg,
+        };
+      });
+      return NextResponse.json({
+        results: results.length > 0 ? results : [{ result: "OK" }],
+      });
+    }
+
     // Call started / progress / ping events
     return NextResponse.json({ received: true, status: "acknowledged" });
   } catch (err: any) {
