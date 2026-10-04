@@ -55,11 +55,11 @@ function ChartTooltip({ active, payload, label, unit }: TooltipContentProps & { 
 
 export function ChartLegend({ items }: { items: { name: string; color: string; value?: string }[] }) {
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+    <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11.5px] sm:text-[12px]">
       {items.map((i) => (
-        <div key={i.name} className="flex items-center gap-1.5 text-[12px] text-slate-500">
-          <span className="h-2 w-2 rounded-full" style={{ background: i.color }} />
-          {i.name}
+        <div key={i.name} className="flex items-center gap-1.5 whitespace-nowrap text-slate-500">
+          <span className="h-2 w-2 rounded-full shrink-0" style={{ background: i.color }} />
+          <span>{i.name}</span>
           {i.value && <span className="font-semibold text-slate-700">{i.value}</span>}
         </div>
       ))}

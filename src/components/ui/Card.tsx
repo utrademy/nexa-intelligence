@@ -28,19 +28,19 @@ export function CardHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-wrap items-start justify-between gap-3 px-4 pt-4 sm:px-6 sm:pt-5", className)}>
-      <div className="flex min-w-0 flex-1 items-start gap-3">
+    <div className={cn("flex flex-col sm:flex-row sm:items-start justify-between gap-3 px-4 pt-4 sm:px-6 sm:pt-5", className)}>
+      <div className="flex min-w-0 w-full sm:w-auto sm:flex-1 items-start gap-3">
         {icon && (
           <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-500 ring-1 ring-slate-200/70">
             {icon}
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="text-[15px] font-semibold tracking-tight text-slate-900 break-words">{title}</h3>
-          {subtitle && <p className="mt-0.5 text-[12.5px] sm:text-[13px] text-slate-500 break-words">{subtitle}</p>}
+          <h3 className="text-[15px] sm:text-[16px] font-semibold tracking-tight text-slate-900 leading-snug">{title}</h3>
+          {subtitle && <p className="mt-1 text-[12.5px] sm:text-[13px] leading-relaxed text-slate-500">{subtitle}</p>}
         </div>
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="w-full sm:w-auto shrink-0 pt-0.5">{action}</div>}
     </div>
   );
 }
