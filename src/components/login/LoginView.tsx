@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Endorsement, Logo, LogoMark, PartnerMark } from "@/components/brand/Logo";
 import { CURRENT_USER } from "@/components/layout/nav";
+import { IntroVideo } from "@/components/dashboard/IntroVideo";
 
 const HIGHLIGHTS = [
   { value: "500 mil", label: "Asociados caracterizados" },
@@ -56,7 +57,12 @@ export function LoginView() {
           </div>
 
           <div className="space-y-6">
-            <PartnerMark label="Inteligencia laboral con el respaldo de" />
+            <div className="flex flex-col gap-3">
+              <PartnerMark label="Inteligencia laboral con el respaldo de" />
+              <div>
+                <IntroVideo variant="login-badge" />
+              </div>
+            </div>
             <div className="flex items-center gap-2 border-t border-white/[0.06] pt-5 text-[12px] text-slate-500">
               <ShieldCheck className="h-4 w-4 text-emerald-400/80" />
               Alineado con la Ley 1581 de 2012 · Recolección de datos con autorización previa
@@ -149,6 +155,10 @@ export function LoginView() {
             <ShieldCheck className="h-4 w-4 text-slate-500" />
             Continuar con SSO corporativo
           </button>
+
+          <div className="mt-5 flex justify-center">
+            <IntroVideo variant="login-link" />
+          </div>
 
           <div className="mt-10 flex justify-center border-t border-slate-100 pt-8 lg:hidden">
             <PartnerMark tone="dark" label="Inteligencia laboral con el respaldo de" className="items-center" />

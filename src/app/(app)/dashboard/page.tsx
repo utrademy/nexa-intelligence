@@ -31,6 +31,7 @@ import { KpiCard } from "@/components/ui/KpiCard";
 import { ProgressBar } from "@/components/ui/Progress";
 import { getDashboardData } from "@/lib/data";
 import { formatCompact, formatNumber } from "@/lib/format";
+import { IntroVideo } from "@/components/dashboard/IntroVideo";
 
 export const metadata: Metadata = { title: "Resumen Ejecutivo" };
 
@@ -87,14 +88,17 @@ export default async function DashboardPage() {
               especializado, brindando visibilidad integral y capacidad operativa para la toma de decisiones.
             </p>
             <div className="mt-6 border-t border-white/10 pt-5">
-              <PartnerMark
-                size="sm"
-                label={
-                  <>
-                    <span className="hidden sm:inline">Inteligencia laboral </span>con el respaldo de
-                  </>
-                }
-              />
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <PartnerMark
+                  size="sm"
+                  label={
+                    <>
+                      <span className="hidden sm:inline">Inteligencia laboral </span>con el respaldo de
+                    </>
+                  }
+                />
+                <IntroVideo variant="dashboard-hero" />
+              </div>
               <p className="mt-2 text-[12px] text-slate-400">
                 Sergio Flórez Abogados aporta el marco analítico, normativo y jurisprudencial para la comprensión del entorno laboral y pensional.
               </p>
