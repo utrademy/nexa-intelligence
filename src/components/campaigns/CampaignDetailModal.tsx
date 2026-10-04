@@ -11,6 +11,7 @@ import {
   Megaphone,
   Pause,
   PhoneCall,
+  PhoneOff,
   Play,
   RotateCcw,
   ShieldAlert,
@@ -18,6 +19,7 @@ import {
   Sparkles,
   Users,
   X,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
@@ -58,7 +60,7 @@ export function CampaignDetailModal({
 
   // Call status
   const [callStatus, setCallStatus] = useState<
-    "idle" | "calling" | "in-progress" | "processing" | "completed" | "failed"
+    "idle" | "calling" | "in-progress" | "processing" | "completed" | "not_answered" | "failed"
   >("idle");
   const [callError, setCallError] = useState<string | null>(null);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
@@ -85,6 +87,44 @@ export function CampaignDetailModal({
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cancel active demo call
+  const cancelActiveCall = async () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    const callToCancel = activeCallId;
+    setActiveCallId(null);
+    setCallStatus("idle");
+    setCallError(null);
+
+    if (callToCancel) {
+      try {
+        await fetch("/api/voice/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ callId: callToCancel, personId: selectedPerson?.id }),
+        });
+      } catch (err) {
+        console.error("Error cancelling demo call:", err);
+      }
+    }
+  };
+
+  const handleCloseDemoModal = async () => {
+    if (callStatus === "calling" || callStatus === "in-progress") {
+      await cancelActiveCall();
+    } else {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    }
+    setDemoOpen(false);
+    setCallStatus("idle");
+    setCallError(null);
+  };
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -161,11 +201,12 @@ export function CampaignDetailModal({
 
     const cleanPhone = testPhone.trim().replace(/\s+/g, "");
     if (!cleanPhone.startsWith("+") || cleanPhone.length < 10) {
-      setCallError("Por favor ingrese un número telefónico de prueba válido con código de país (ej. +573001234567)");
+      setCallError("Por favor ingrese un número telefónico de prueba válido con código de país (ej. +573001234567 o +1305...)");
       return;
     }
 
     setCallError(null);
+    setCallResult(null);
     setCallStatus("calling");
 
     try {
@@ -187,21 +228,61 @@ export function CampaignDetailModal({
 
       setActiveCallId(data.callId);
 
-      // Start polling status
+      // Start polling status with timeout safeguard
+      let pollCount = 0;
+      const MAX_POLLS = 40;
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
+        pollCount++;
+        if (pollCount > MAX_POLLS) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setCallStatus("failed");
+          setCallError("Tiempo de espera agotado. La llamada de prueba no pudo completarse.");
+          return;
+        }
+
         try {
           const statusRes = await fetch(`/api/voice/status?callId=${data.callId}&personId=${selectedPerson.id}`);
           if (!statusRes.ok) return;
           const statusData = await statusRes.json();
 
-          if (statusData.status === "failed" || statusData.status === "error" || (statusData.completed && statusData.error)) {
+          // 1. Unanswered / Busy / Rejected
+          if (statusData.status === "not_answered" || statusData.notAnswered) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setCallStatus("not_answered");
+            setCallError(statusData.error || "El asociado no contestó la llamada o la línea estaba ocupada.");
+            return;
+          }
+
+          // 2. Failed / Error without data
+          if (
+            statusData.status === "failed" ||
+            statusData.status === "error" ||
+            (statusData.completed && statusData.error && !statusData.hasData)
+          ) {
             if (pollRef.current) clearInterval(pollRef.current);
             setCallStatus("failed");
-            setCallError(statusData.error || "Llamada no completada o no contestada.");
-          } else if (statusData.status === "in-progress") {
+            setCallError(statusData.error || "Llamada no completada o interrumpida.");
+            return;
+          }
+
+          // 3. User rejected consent explicitly
+          if (statusData.consentDenied) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setCallStatus("not_answered");
+            setCallError(statusData.error || "El asociado atendió pero indicó que no autorizaba continuar con la actualización.");
+            return;
+          }
+
+          // 4. In-progress states
+          if (statusData.status === "ringing" || statusData.status === "queued") {
+            setCallStatus("calling");
+          } else if (statusData.status === "in-progress" || statusData.status === "forwarding") {
             setCallStatus("in-progress");
-          } else if (statusData.completed || statusData.dbUpdated) {
+          }
+
+          // 5. Successful completion (has recorded data or dbUpdated is true)
+          if ((statusData.completed && (statusData.hasData || statusData.dbUpdated)) || statusData.dbUpdated) {
             setCallStatus("processing");
             if (pollRef.current) clearInterval(pollRef.current);
 
@@ -238,7 +319,7 @@ export function CampaignDetailModal({
               if (onCampaignUpdated) {
                 onCampaignUpdated();
               }
-            }, 1200);
+            }, 1000);
           }
         } catch {
           // keep polling
@@ -386,8 +467,7 @@ export function CampaignDetailModal({
           className="fixed inset-0 z-60 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-sm animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              if (pollRef.current) clearInterval(pollRef.current);
-              setDemoOpen(false);
+              handleCloseDemoModal();
             }
           }}
         >
@@ -405,10 +485,7 @@ export function CampaignDetailModal({
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  if (pollRef.current) clearInterval(pollRef.current);
-                  setDemoOpen(false);
-                }}
+                onClick={handleCloseDemoModal}
                 className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
                 aria-label="Cerrar modal"
               >
@@ -472,7 +549,7 @@ export function CampaignDetailModal({
                   type="text"
                   value={testPhone}
                   onChange={(e) => setTestPhone(e.target.value)}
-                  placeholder="+57 300 123 4567"
+                  placeholder="+57 300 123 4567 o +1 305..."
                   disabled={callStatus === "calling" || callStatus === "in-progress" || callStatus === "processing"}
                   className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-mono text-[14px] text-slate-900 shadow-xs focus:border-violet-500 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20 disabled:bg-slate-100"
                 />
@@ -482,9 +559,32 @@ export function CampaignDetailModal({
               {callStatus !== "idle" && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="space-y-2 text-[12.5px]">
-                    <div className={cn("flex items-center gap-2", callStatus === "calling" ? "font-semibold text-violet-700" : "text-slate-500")}>
-                      {callStatus === "calling" ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                      Iniciando llamada con IA al teléfono de prueba
+                    <div className={cn(
+                      "flex items-center gap-2",
+                      callStatus === "calling"
+                        ? "font-semibold text-violet-700"
+                        : callStatus === "not_answered"
+                          ? "font-semibold text-amber-700"
+                          : callStatus === "failed"
+                            ? "font-semibold text-rose-700"
+                            : callStatus === "in-progress" || callStatus === "processing" || callStatus === "completed"
+                              ? "text-slate-500"
+                              : "text-slate-300"
+                    )}>
+                      {callStatus === "calling" ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
+                      ) : callStatus === "not_answered" ? (
+                        <PhoneOff className="h-4 w-4 text-amber-600" />
+                      ) : callStatus === "failed" ? (
+                        <XCircle className="h-4 w-4 text-rose-600" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      )}
+                      {callStatus === "not_answered"
+                        ? "Llamada no contestada o rechazada"
+                        : callStatus === "failed"
+                          ? "Llamada no completada"
+                          : "Iniciando llamada con IA al teléfono de prueba"}
                     </div>
                     <div className={cn("flex items-center gap-2", callStatus === "in-progress" ? "font-semibold text-violet-700" : callStatus === "processing" || callStatus === "completed" ? "text-slate-500" : "text-slate-300")}>
                       {callStatus === "in-progress" ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : callStatus === "processing" || callStatus === "completed" ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="h-4 w-4 rounded-full border border-slate-300" />}
@@ -502,10 +602,29 @@ export function CampaignDetailModal({
                 </div>
               )}
 
+              {/* NOT ANSWERED ALERT */}
+              {callStatus === "not_answered" && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-[12.5px] text-amber-900">
+                  <div className="flex items-center gap-2 font-bold text-amber-800">
+                    <PhoneOff className="h-4.5 w-4.5 text-amber-600" />
+                    Llamada de prueba no contestada o rechazada
+                  </div>
+                  <p className="mt-1 leading-relaxed text-amber-800">
+                    {callError || "El teléfono no contestó o el usuario colgó. No se registraron cambios en las métricas de la campaña."}
+                  </p>
+                </div>
+              )}
+
               {/* ERROR ALERT */}
               {callStatus === "failed" && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-[12.5px] text-rose-800">
-                  <b>Error en la llamada:</b> {callError}
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-800">
+                  <div className="flex items-center gap-2 font-bold text-rose-700">
+                    <XCircle className="h-4.5 w-4.5 text-rose-600" />
+                    Llamada no completada
+                  </div>
+                  <p className="mt-1 leading-relaxed text-rose-700">
+                    {callError || "Ocurrió un error en la infraestructura de voz."}
+                  </p>
                 </div>
               )}
 
@@ -546,24 +665,30 @@ export function CampaignDetailModal({
             <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/80 px-6 py-4">
               <Button
                 variant="ghost"
-                onClick={() => {
-                  if (pollRef.current) clearInterval(pollRef.current);
-                  setDemoOpen(false);
-                }}
+                onClick={handleCloseDemoModal}
               >
                 Cerrar
               </Button>
-              {callStatus === "idle" || callStatus === "failed" ? (
+              {callStatus === "idle" ? (
                 <Button variant="ai" onClick={handleStartDemoCall}>
-                  <PhoneCall className="h-4 w-4" />
+                  <PhoneCall className="h-4 w-4 mr-1.5" />
                   Lanzar llamada de prueba
                 </Button>
+              ) : callStatus === "not_answered" || callStatus === "failed" ? (
+                <Button variant="ai" onClick={handleStartDemoCall}>
+                  <RotateCcw className="h-4 w-4 mr-1.5" />
+                  Reintentar llamada
+                </Button>
               ) : callStatus === "completed" ? (
-                <Button onClick={() => setDemoOpen(false)}>Listo</Button>
+                <Button onClick={handleCloseDemoModal}>Listo</Button>
               ) : (
-                <Button disabled>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Llamada en progreso…
+                <Button
+                  variant="secondary"
+                  className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                  onClick={cancelActiveCall}
+                >
+                  <PhoneOff className="h-4 w-4 mr-1.5" />
+                  Cancelar llamada
                 </Button>
               )}
             </div>

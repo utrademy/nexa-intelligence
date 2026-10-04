@@ -49,7 +49,17 @@ export interface VoiceCallInitiateResult {
 
 export interface VoiceProviderAdapter {
   startCharacterizationCall(params: VoiceCallInitiateParams): Promise<VoiceCallInitiateResult>;
-  getCallStatus(callId: string): Promise<{ status: string; completed: boolean; error?: string }>;
+  cancelCall(callId: string): Promise<boolean>;
+  getCallStatus(callId: string): Promise<{
+    status: string;
+    completed: boolean;
+    notAnswered?: boolean;
+    hasData?: boolean;
+    consentDenied?: boolean;
+    endedReason?: string;
+    error?: string;
+    rawCallData?: any;
+  }>;
   verifyWebhook(req: Request, rawBody: string): Promise<boolean>;
   normalizeCallResult(payload: any): NormalizedCallResult | null;
   getResolvedPhoneNumberId(): Promise<string>;
@@ -467,7 +477,33 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
     };
   }
 
-  async getCallStatus(callId: string): Promise<{ status: string; completed: boolean; error?: string }> {
+  async cancelCall(callId: string): Promise<boolean> {
+    const apiKey = VOICE_CONFIG.apiKey;
+    if (!apiKey) return false;
+    try {
+      const res = await fetch(`${this.apiUrl}/call/${callId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+      return res.ok;
+    } catch (err) {
+      console.error("[VapiVoiceAdapter] Error canceling call:", err);
+      return false;
+    }
+  }
+
+  async getCallStatus(callId: string): Promise<{
+    status: string;
+    completed: boolean;
+    notAnswered?: boolean;
+    hasData?: boolean;
+    consentDenied?: boolean;
+    endedReason?: string;
+    error?: string;
+    rawCallData?: any;
+  }> {
     const apiKey = VOICE_CONFIG.apiKey;
     if (!apiKey) {
       return { status: "unknown", completed: false, error: "Missing API Key" };
@@ -485,19 +521,112 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
     }
 
     const data = await res.json();
-    const status = data.status || "in-progress";
-    const completed = status === "ended" || status === "completed";
-    const isError =
-      status === "error" ||
-      data.endedReason === "call.start.error-get-transport" ||
-      data.endedReason?.includes("error");
+    const rawStatus = data.status || "in-progress";
+    const endedReason = data.endedReason || "";
 
-    const errorMsg = data.endedMessage || data.error || (isError ? `Fallo de telefonía: ${data.endedReason}` : undefined);
+    // 1. In-progress states (dialing, ringing, active conversation)
+    if (rawStatus === "queued" || rawStatus === "ringing" || rawStatus === "in-progress" || rawStatus === "forwarding") {
+      return {
+        status: rawStatus,
+        completed: false,
+        endedReason,
+        rawCallData: data,
+      };
+    }
+
+    // 2. Call ended
+    if (rawStatus === "ended" || rawStatus === "completed") {
+      const NOT_ANSWERED_REASONS = [
+        "customer-did-not-answer",
+        "customer-busy",
+        "no-answer",
+        "customer-rejected",
+      ];
+
+      if (NOT_ANSWERED_REASONS.includes(endedReason)) {
+        return {
+          status: "not_answered",
+          completed: false,
+          notAnswered: true,
+          endedReason,
+          error: "El asociado no contestó la llamada o la línea estaba ocupada.",
+          rawCallData: data,
+        };
+      }
+
+      const isTelephonyError =
+        rawStatus === "error" ||
+        endedReason.includes("error") ||
+        endedReason === "call.start.error-get-transport" ||
+        endedReason === "twilio-failed-to-connect-call" ||
+        endedReason === "phone-call-provider-closed-websocket";
+
+      if (isTelephonyError) {
+        return {
+          status: "failed",
+          completed: false,
+          endedReason,
+          error: data.endedMessage || data.error || `Fallo al conectar la llamada telefónica (${endedReason}).`,
+          rawCallData: data,
+        };
+      }
+
+      // Check extracted structured data
+      const structured = data.analysis?.structuredData || {};
+      const dataKeys = Object.keys(structured).filter((k) => k !== "consentToContinue");
+      const hasData = dataKeys.length > 0;
+      const messagesCount = data.artifact?.messages?.length || 0;
+
+      if (endedReason === "silence-timed-out" && !hasData) {
+        return {
+          status: "not_answered",
+          completed: false,
+          notAnswered: true,
+          endedReason,
+          error: "La llamada finalizó por silencio prolongado en la línea sin respuestas.",
+          rawCallData: data,
+        };
+      }
+
+      if (structured.consentToContinue === false) {
+        return {
+          status: "ended",
+          completed: true,
+          consentDenied: true,
+          hasData: false,
+          endedReason,
+          error: "El asociado atendió la llamada pero indicó que no autorizaba continuar con la actualización.",
+          rawCallData: data,
+        };
+      }
+
+      if (!hasData && messagesCount <= 2 && endedReason === "customer-ended-call") {
+        return {
+          status: "not_answered",
+          completed: false,
+          notAnswered: true,
+          endedReason,
+          error: "El asociado colgó la llamada antes de responder las preguntas.",
+          rawCallData: data,
+        };
+      }
+
+      // Call completed successfully with collected data or regular completion
+      return {
+        status: "completed",
+        completed: true,
+        hasData,
+        endedReason,
+        rawCallData: data,
+      };
+    }
 
     return {
-      status: isError ? "failed" : status,
-      completed,
-      error: errorMsg,
+      status: rawStatus,
+      completed: false,
+      endedReason,
+      error: data.endedMessage || data.error,
+      rawCallData: data,
     };
   }
 

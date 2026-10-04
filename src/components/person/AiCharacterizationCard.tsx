@@ -10,13 +10,16 @@ import {
   MessageCircle,
   MessageSquareText,
   PhoneCall,
+  PhoneOff,
   RotateCcw,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
   User,
   X,
+  XCircle,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CHANNEL_SOURCE } from "@/lib/characterization";
 import type { Channel } from "@/lib/types";
@@ -124,16 +127,56 @@ export function AiCharacterizationCard({
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
+  const router = useRouter();
+
   // Real Voice Modal state
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [authorizedPhone, setAuthorizedPhone] = useState("+57 ");
   const [voiceCallStatus, setVoiceCallStatus] = useState<
-    "idle" | "preparing" | "calling" | "in-progress" | "processing" | "completed" | "failed" | "unconfigured"
+    "idle" | "preparing" | "calling" | "in-progress" | "processing" | "completed" | "not_answered" | "failed" | "unconfigured"
   >("idle");
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [voiceResult, setVoiceResult] = useState<VoiceCallCompletedEvent | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cancel active call in progress
+  const cancelActiveCall = async () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    const callToCancel = activeCallId;
+    setActiveCallId(null);
+    setVoiceCallStatus("idle");
+    setVoiceError(null);
+
+    if (callToCancel) {
+      try {
+        await fetch("/api/voice/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ callId: callToCancel, personId }),
+        });
+      } catch (err) {
+        console.error("Error cancelling call:", err);
+      }
+    }
+  };
+
+  const handleCloseVoiceModal = async () => {
+    if (voiceCallStatus === "calling" || voiceCallStatus === "in-progress" || voiceCallStatus === "preparing") {
+      await cancelActiveCall();
+    } else {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = null;
+      }
+    }
+    setIsVoiceModalOpen(false);
+    setVoiceCallStatus("idle");
+    setVoiceError(null);
+  };
 
   useEffect(() => () => {
     timers.current.forEach(clearTimeout);
@@ -187,11 +230,12 @@ export function AiCharacterizationCard({
   const startRealVoiceCall = async () => {
     const cleanPhone = authorizedPhone.trim().replace(/\s+/g, "");
     if (!cleanPhone.startsWith("+") || cleanPhone.length < 10) {
-      setVoiceError("Por favor ingrese un número válido con código de país (ej. +573001234567)");
+      setVoiceError("Por favor ingrese un número válido con código de país (ej. +573001234567 o +1305...)");
       return;
     }
 
     setVoiceError(null);
+    setVoiceResult(null);
     setVoiceCallStatus("preparing");
 
     try {
@@ -219,44 +263,88 @@ export function AiCharacterizationCard({
       setActiveCallId(data.callId);
       setVoiceCallStatus("calling");
 
-      // Start polling status
+      // Start polling status with timeout safeguard
+      let pollCount = 0;
+      const MAX_POLLS = 40; // ~120s limit
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       pollTimerRef.current = setInterval(async () => {
+        pollCount++;
+        if (pollCount > MAX_POLLS) {
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          setVoiceCallStatus("failed");
+          setVoiceError("Tiempo de espera agotado. La llamada no pudo completarse.");
+          return;
+        }
+
         try {
           const statusRes = await fetch(`/api/voice/status?callId=${data.callId}&personId=${personId}`);
           if (!statusRes.ok) return;
           const statusData = await statusRes.json();
 
-          if (statusData.status === "failed" || statusData.status === "error" || (statusData.completed && statusData.error)) {
+          // 1. Unanswered / Busy / Rejected
+          if (statusData.status === "not_answered" || statusData.notAnswered) {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            setVoiceCallStatus("not_answered");
+            setVoiceError(statusData.error || "El asociado no contestó la llamada o la línea estaba ocupada.");
+            return;
+          }
+
+          // 2. Failed / Error without data
+          if (
+            statusData.status === "failed" ||
+            statusData.status === "error" ||
+            (statusData.completed && statusData.error && !statusData.hasData)
+          ) {
             if (pollTimerRef.current) clearInterval(pollTimerRef.current);
             setVoiceCallStatus("failed");
-            setVoiceError(statusData.error || "Llamada no completada o rechazada.");
-          } else if (statusData.status === "in-progress") {
+            setVoiceError(statusData.error || "Llamada no completada o interrumpida.");
+            return;
+          }
+
+          // 3. User rejected consent explicitly
+          if (statusData.consentDenied) {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            setVoiceCallStatus("not_answered");
+            setVoiceError(statusData.error || "El asociado atendió pero indicó que no autorizaba continuar con la actualización.");
+            return;
+          }
+
+          // 4. In-progress states (ringing vs conversation)
+          if (statusData.status === "ringing" || statusData.status === "queued") {
+            setVoiceCallStatus("calling");
+          } else if (statusData.status === "in-progress" || statusData.status === "forwarding") {
             setVoiceCallStatus("in-progress");
-          } else if (statusData.completed || statusData.dbUpdated) {
+          }
+
+          // 5. Successful completion (recorded in DB or has data)
+          if ((statusData.completed && (statusData.hasData || statusData.dbUpdated)) || statusData.dbUpdated) {
             setVoiceCallStatus("processing");
             if (pollTimerRef.current) clearInterval(pollTimerRef.current);
 
-            // Fetch final completion
             setTimeout(() => {
               setVoiceCallStatus("completed");
               const defaultUpdated = [
-                "Situación laboral", "Ocupación", "Sector económico", "Tipo de vinculación", "Rango de ingresos",
+                "Situación laboral", "Ocupación", "Sector económico", "Rango de ingresos",
                 "Personas en el hogar", "Personas a cargo", "Tipo de vivienda", "Estrato socioeconómico",
                 "Nivel educativo", "Área de estudio", "Municipio", "Zona de residencia", "Jefatura de hogar",
-                "Capacidad de ahorro", "Metas financieras", "Canal de contacto preferido"
+                "Condición de salud / discapacidad", "Metas financieras", "Canal de contacto"
               ];
+              const fieldsList = Array.isArray(statusData.fieldsUpdated) && statusData.fieldsUpdated.length > 0
+                ? statusData.fieldsUpdated
+                : defaultUpdated;
+
               const completedEvt: VoiceCallCompletedEvent = {
                 personId,
                 previousScore: score,
                 newScore: statusData.newScore || Math.min(score + 22, 100),
-                fieldsUpdated: Array.isArray(statusData.fieldsUpdated) && statusData.fieldsUpdated.length > 0 ? statusData.fieldsUpdated : defaultUpdated,
+                fieldsUpdated: fieldsList,
                 consentStatus: "Otorgada",
                 summary: "Llamada con IA · Caracterización completada en vivo",
               };
               setVoiceResult(completedEvt);
               if (onRealVoiceComplete) onRealVoiceComplete(completedEvt);
-            }, 1200);
+              router.refresh();
+            }, 1000);
           }
         } catch {
           // continue polling
@@ -447,8 +535,7 @@ export function AiCharacterizationCard({
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-3 sm:p-4 backdrop-blur-sm animate-fade-in"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-              setIsVoiceModalOpen(false);
+              handleCloseVoiceModal();
             }
           }}
         >
@@ -466,10 +553,7 @@ export function AiCharacterizationCard({
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-                  setIsVoiceModalOpen(false);
-                }}
+                onClick={handleCloseVoiceModal}
                 className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
                 aria-label="Cerrar modal"
               >
@@ -506,7 +590,7 @@ export function AiCharacterizationCard({
                   type="text"
                   value={authorizedPhone}
                   onChange={(e) => setAuthorizedPhone(e.target.value)}
-                  placeholder="+57 300 123 4567"
+                  placeholder="+57 300 123 4567 o +1 305..."
                   disabled={voiceCallStatus === "calling" || voiceCallStatus === "in-progress" || voiceCallStatus === "processing"}
                   className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-mono text-[14px] text-slate-900 shadow-xs focus:border-violet-500 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20 disabled:bg-slate-100"
                 />
@@ -527,9 +611,34 @@ export function AiCharacterizationCard({
                       {voiceCallStatus === "preparing" ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
                       Preparando llamada
                     </div>
-                    <div className={cn("flex items-center gap-2", voiceCallStatus === "calling" ? "font-semibold text-violet-700" : voiceCallStatus === "in-progress" || voiceCallStatus === "processing" || voiceCallStatus === "completed" ? "text-slate-500" : "text-slate-300")}>
-                      {voiceCallStatus === "calling" ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : voiceCallStatus === "in-progress" || voiceCallStatus === "processing" || voiceCallStatus === "completed" ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="h-4 w-4 rounded-full border border-slate-300" />}
-                      Llamando
+                    <div className={cn(
+                      "flex items-center gap-2",
+                      voiceCallStatus === "calling"
+                        ? "font-semibold text-violet-700"
+                        : voiceCallStatus === "not_answered"
+                          ? "font-semibold text-amber-700"
+                          : voiceCallStatus === "failed"
+                            ? "font-semibold text-rose-700"
+                            : voiceCallStatus === "in-progress" || voiceCallStatus === "processing" || voiceCallStatus === "completed"
+                              ? "text-slate-500"
+                              : "text-slate-300"
+                    )}>
+                      {voiceCallStatus === "calling" ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-violet-600" />
+                      ) : voiceCallStatus === "not_answered" ? (
+                        <PhoneOff className="h-4 w-4 text-amber-600" />
+                      ) : voiceCallStatus === "failed" ? (
+                        <XCircle className="h-4 w-4 text-rose-600" />
+                      ) : voiceCallStatus === "in-progress" || voiceCallStatus === "processing" || voiceCallStatus === "completed" ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      ) : (
+                        <span className="h-4 w-4 rounded-full border border-slate-300" />
+                      )}
+                      {voiceCallStatus === "not_answered"
+                        ? "Llamada no contestada o rechazada"
+                        : voiceCallStatus === "failed"
+                          ? "Llamada no completada"
+                          : "Llamando"}
                     </div>
                     <div className={cn("flex items-center gap-2", voiceCallStatus === "in-progress" ? "font-semibold text-violet-700" : voiceCallStatus === "processing" || voiceCallStatus === "completed" ? "text-slate-500" : "text-slate-300")}>
                       {voiceCallStatus === "in-progress" ? <Loader2 className="h-4 w-4 animate-spin text-violet-600" /> : voiceCallStatus === "processing" || voiceCallStatus === "completed" ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <span className="h-4 w-4 rounded-full border border-slate-300" />}
@@ -560,11 +669,32 @@ export function AiCharacterizationCard({
                 </div>
               )}
 
+              {/* NOT ANSWERED BANNER */}
+              {voiceCallStatus === "not_answered" && (
+                <div className="rounded-xl border border-amber-300 bg-amber-50/95 p-4 text-[12.5px] text-amber-900">
+                  <div className="flex items-center gap-2 font-bold text-amber-800">
+                    <PhoneOff className="h-4.5 w-4.5 text-amber-600" />
+                    Llamada no contestada o rechazada
+                  </div>
+                  <p className="mt-1.5 leading-relaxed text-amber-800">
+                    {voiceError || "El asociado no contestó la llamada o la rechazó. No se realizaron modificaciones en los datos del perfil."}
+                  </p>
+                  <p className="mt-2 text-[11.5px] text-amber-700">
+                    Puede verificar el número o reintentar la llamada cuando el asociado esté disponible.
+                  </p>
+                </div>
+              )}
+
               {/* FAILED BANNER */}
               {voiceCallStatus === "failed" && (
-                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-[12.5px] text-rose-800">
-                  <div className="font-semibold">Llamada no completada</div>
-                  <div className="mt-0.5 text-rose-600">{voiceError || "Ocurrió un error al contactar al teléfono de destino."}</div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-[12.5px] text-rose-800">
+                  <div className="flex items-center gap-2 font-bold text-rose-700">
+                    <XCircle className="h-4.5 w-4.5 text-rose-600" />
+                    Llamada no completada
+                  </div>
+                  <div className="mt-1 leading-relaxed text-rose-700">
+                    {voiceError || "Ocurrió un inconveniente al contactar al teléfono de destino. Puede intentar nuevamente."}
+                  </div>
                 </div>
               )}
 
@@ -596,15 +726,13 @@ export function AiCharacterizationCard({
             <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/80 px-6 py-4">
               <button
                 type="button"
-                onClick={() => {
-                  if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-                  setIsVoiceModalOpen(false);
-                }}
+                onClick={handleCloseVoiceModal}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-medium text-slate-600 transition hover:bg-slate-50"
               >
                 Cerrar
               </button>
-              {voiceCallStatus === "idle" || voiceCallStatus === "failed" || voiceCallStatus === "unconfigured" ? (
+
+              {voiceCallStatus === "idle" ? (
                 <button
                   type="button"
                   onClick={startRealVoiceCall}
@@ -613,10 +741,19 @@ export function AiCharacterizationCard({
                   <PhoneCall className="h-4 w-4" />
                   INICIAR LLAMADA CON IA
                 </button>
+              ) : voiceCallStatus === "not_answered" || voiceCallStatus === "failed" ? (
+                <button
+                  type="button"
+                  onClick={startRealVoiceCall}
+                  className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-md shadow-violet-500/25 transition hover:bg-violet-700 active:scale-[0.98]"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reintentar llamada
+                </button>
               ) : voiceCallStatus === "completed" ? (
                 <button
                   type="button"
-                  onClick={() => setIsVoiceModalOpen(false)}
+                  onClick={handleCloseVoiceModal}
                   className="rounded-xl bg-emerald-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-md shadow-emerald-500/25 hover:bg-emerald-700"
                 >
                   Entendido
@@ -624,11 +761,11 @@ export function AiCharacterizationCard({
               ) : (
                 <button
                   type="button"
-                  disabled
-                  className="inline-flex items-center gap-2 rounded-xl bg-violet-400 px-5 py-2.5 text-[13px] font-semibold text-white"
+                  onClick={cancelActiveCall}
+                  className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-md shadow-rose-500/25 transition hover:bg-rose-700 active:scale-[0.98]"
                 >
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Procesando llamada...
+                  <PhoneOff className="h-4 w-4" />
+                  Cancelar llamada
                 </button>
               )}
             </div>
