@@ -137,7 +137,7 @@ export default async function DashboardPage() {
 
       {/* 2. REAL EXECUTIVE KPIS */}
       <section className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-[13px] font-semibold tracking-wider text-slate-500 uppercase">Indicadores Clave de Desempeño</h3>
           <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-400">
             <Database className="h-3.5 w-3.5 text-indigo-500" />
@@ -442,7 +442,7 @@ export default async function DashboardPage() {
 
       {/* 7. POPULATION INTELLIGENCE: REAL DISTRIBUTIONS */}
       <section className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-[13px] font-semibold tracking-wider text-slate-500 uppercase">Inteligencia Poblacional</h3>
           <span className="text-[12px] text-slate-400">Segmentación fáctica de asociados en base de datos</span>
         </div>
