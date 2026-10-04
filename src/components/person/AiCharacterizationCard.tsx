@@ -165,17 +165,18 @@ export function AiCharacterizationCard({
   };
 
   const handleCloseVoiceModal = async () => {
-    if (voiceCallStatus === "calling" || voiceCallStatus === "in-progress" || voiceCallStatus === "preparing") {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    if (activeCallId && voiceCallStatus !== "completed") {
       await cancelActiveCall();
     } else {
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
+      setActiveCallId(null);
+      setVoiceCallStatus("idle");
+      setVoiceError(null);
     }
     setIsVoiceModalOpen(false);
-    setVoiceCallStatus("idle");
-    setVoiceError(null);
   };
 
   useEffect(() => () => {
@@ -263,17 +264,19 @@ export function AiCharacterizationCard({
       setActiveCallId(data.callId);
       setVoiceCallStatus("calling");
 
-      // Start polling status with timeout safeguard
+      // Start polling status with extended duration (~20 minutes maximum)
       let pollCount = 0;
-      const MAX_POLLS = 40; // ~120s limit
+      const MAX_POLLS = 400;
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       pollTimerRef.current = setInterval(async () => {
         pollCount++;
         if (pollCount > MAX_POLLS) {
-          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-          setVoiceCallStatus("failed");
-          setVoiceError("Tiempo de espera agotado. La llamada no pudo completarse.");
-          return;
+          if (voiceCallStatus !== "in-progress" && voiceCallStatus !== "calling") {
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            setVoiceCallStatus("failed");
+            setVoiceError("Tiempo de espera agotado.");
+            return;
+          }
         }
 
         try {
@@ -289,11 +292,11 @@ export function AiCharacterizationCard({
             return;
           }
 
-          // 2. Failed / Error without data
+          // 2. Failed / Telephony error without collected data
           if (
-            statusData.status === "failed" ||
-            statusData.status === "error" ||
-            (statusData.completed && statusData.error && !statusData.hasData)
+            (statusData.status === "failed" || statusData.status === "error") &&
+            !statusData.hasData &&
+            !statusData.dbUpdated
           ) {
             if (pollTimerRef.current) clearInterval(pollTimerRef.current);
             setVoiceCallStatus("failed");

@@ -39,8 +39,12 @@ export async function GET(request: Request) {
         fieldsUpdated = struct?.fields_updated;
       }
 
-      // If call failed or was not answered, update interaction state in DB
-      if (statusData.status === "not_answered" || statusData.notAnswered || statusData.status === "failed") {
+      // If call failed or was not answered, update interaction state in DB only if no data was collected
+      if (
+        !dbUpdated &&
+        !statusData.hasData &&
+        (statusData.status === "not_answered" || statusData.notAnswered || statusData.status === "failed")
+      ) {
         await supabase
           .from("interactions")
           .update({

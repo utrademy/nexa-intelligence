@@ -113,17 +113,18 @@ export function CampaignDetailModal({
   };
 
   const handleCloseDemoModal = async () => {
-    if (callStatus === "calling" || callStatus === "in-progress") {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    if (activeCallId && callStatus !== "completed") {
       await cancelActiveCall();
     } else {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
+      setActiveCallId(null);
+      setCallStatus("idle");
+      setCallError(null);
     }
     setDemoOpen(false);
-    setCallStatus("idle");
-    setCallError(null);
   };
 
   // Clean up timer on unmount
@@ -228,17 +229,19 @@ export function CampaignDetailModal({
 
       setActiveCallId(data.callId);
 
-      // Start polling status with timeout safeguard
+      // Start polling status with extended duration (~20 minutes maximum)
       let pollCount = 0;
-      const MAX_POLLS = 40;
+      const MAX_POLLS = 400;
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
         pollCount++;
         if (pollCount > MAX_POLLS) {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setCallStatus("failed");
-          setCallError("Tiempo de espera agotado. La llamada de prueba no pudo completarse.");
-          return;
+          if (callStatus !== "in-progress" && callStatus !== "calling") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setCallStatus("failed");
+            setCallError("Tiempo de espera agotado.");
+            return;
+          }
         }
 
         try {
@@ -256,9 +259,9 @@ export function CampaignDetailModal({
 
           // 2. Failed / Error without data
           if (
-            statusData.status === "failed" ||
-            statusData.status === "error" ||
-            (statusData.completed && statusData.error && !statusData.hasData)
+            (statusData.status === "failed" || statusData.status === "error") &&
+            !statusData.hasData &&
+            !statusData.dbUpdated
           ) {
             if (pollRef.current) clearInterval(pollRef.current);
             setCallStatus("failed");
