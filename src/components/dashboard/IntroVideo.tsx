@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 
 interface IntroVideoProps {
-  variant?: "dashboard-hero" | "login-badge" | "login-link" | "button";
+  variant?: "dashboard-hero" | "login-badge" | "login-card" | "button";
   className?: string;
 }
 
@@ -18,13 +18,17 @@ export function IntroVideo({ variant = "dashboard-hero", className }: IntroVideo
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`group inline-flex items-center gap-2 rounded-xl border border-indigo-400/30 bg-indigo-500/10 px-3.5 py-1.5 text-[12.5px] font-medium text-indigo-200 backdrop-blur transition hover:border-indigo-400/50 hover:bg-indigo-500/20 hover:text-white ${className ?? ""}`}
+          className={`group relative inline-flex items-center gap-2.5 overflow-hidden rounded-xl border border-indigo-400/40 bg-linear-to-r from-indigo-500/20 via-indigo-600/30 to-violet-500/20 px-4 py-2 text-[13px] font-semibold text-white shadow-[0_0_20px_-3px_rgba(99,102,241,0.4)] backdrop-blur transition-all duration-300 hover:border-indigo-300 hover:shadow-[0_0_25px_0_rgba(99,102,241,0.6)] hover:brightness-110 active:scale-[0.98] ${className ?? ""}`}
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-white shadow-xs group-hover:scale-105 transition-transform">
-            <Play className="h-2.5 w-2.5 fill-current ml-0.5" />
+          {/* Subtle glowing effect */}
+          <span className="pointer-events-none absolute -inset-px rounded-xl bg-linear-to-r from-indigo-400/20 via-cyan-400/20 to-violet-400/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          
+          <span className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-linear-to-tr from-indigo-500 to-cyan-400 text-white shadow-md transition-transform duration-300 group-hover:scale-110">
+            <Play className="h-3 w-3 fill-current ml-0.5" />
           </span>
-          <span>Ver video introductorio</span>
-          <span className="text-[11px] text-indigo-300/80">· Dr. Sergio Flórez</span>
+          <span className="relative font-medium tracking-wide">
+            Ver video introductorio <span className="font-normal text-indigo-200">· Dr. Sergio Flórez</span>
+          </span>
         </button>
       )}
 
@@ -32,26 +36,43 @@ export function IntroVideo({ variant = "dashboard-hero", className }: IntroVideo
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`group mt-3 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-medium text-slate-300 backdrop-blur transition hover:border-indigo-400/40 hover:bg-indigo-500/15 hover:text-white ${className ?? ""}`}
+          className={`group mt-3.5 inline-flex items-center gap-2.5 rounded-xl border border-indigo-400/30 bg-linear-to-r from-indigo-500/15 via-white/[0.08] to-cyan-500/15 px-3.5 py-2 text-[12.5px] font-medium text-indigo-100 backdrop-blur transition-all duration-200 hover:border-indigo-300/60 hover:bg-indigo-500/25 hover:text-white hover:shadow-lg hover:shadow-indigo-500/20 ${className ?? ""}`}
         >
-          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500/80 text-white transition-transform group-hover:scale-110">
-            <Play className="h-2 w-2 fill-current ml-0.5" />
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-linear-to-tr from-indigo-500 to-cyan-400 text-white shadow-sm transition-transform duration-200 group-hover:scale-110">
+            <Play className="h-2.5 w-2.5 fill-current ml-0.5" />
           </span>
           <span>Video explicativo de la plataforma</span>
-          <span className="text-[10.5px] text-indigo-300">· Dr. Sergio Flórez</span>
+          <span className="rounded-md bg-indigo-500/20 px-1.5 py-0.5 text-[11px] font-normal text-indigo-200">Dr. Sergio Flórez</span>
         </button>
       )}
 
-      {variant === "login-link" && (
+      {variant === "login-card" && (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className={`group inline-flex items-center gap-1.5 text-[12px] font-medium text-slate-400 transition hover:text-indigo-600 ${className ?? ""}`}
+          className={`group relative flex w-full items-center justify-between gap-3 rounded-xl border border-indigo-100/90 bg-linear-to-r from-indigo-50/70 via-white to-indigo-50/40 p-3 text-left transition-all duration-200 hover:border-indigo-300 hover:bg-indigo-50/90 hover:shadow-sm active:scale-[0.99] ${className ?? ""}`}
         >
-          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition group-hover:bg-indigo-50 group-hover:text-indigo-600">
-            <Play className="h-2 w-2 fill-current ml-0.5" />
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/25 transition-transform duration-200 group-hover:scale-105">
+              <Play className="h-4 w-4 fill-white ml-0.5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[12.5px] font-semibold text-slate-800 transition-colors group-hover:text-indigo-900">
+                  Video introductorio
+                </span>
+                <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
+                  Demo
+                </span>
+              </div>
+              <p className="truncate text-[11.5px] text-slate-500">
+                Presentación por el Dr. Sergio Flórez
+              </p>
+            </div>
+          </div>
+          <span className="shrink-0 rounded-lg border border-indigo-200/60 bg-white px-2.5 py-1 text-[11px] font-medium text-indigo-700 shadow-2xs transition-colors group-hover:bg-indigo-600 group-hover:text-white">
+            Ver video
           </span>
-          <span>Ver video de bienvenida por Dr. Sergio Flórez</span>
         </button>
       )}
 

@@ -156,11 +156,11 @@ export function LoginView() {
             Continuar con SSO corporativo
           </button>
 
-          <div className="mt-5 flex justify-center">
-            <IntroVideo variant="login-link" />
+          <div className="mt-5">
+            <IntroVideo variant="login-card" />
           </div>
 
-          <div className="mt-10 flex justify-center border-t border-slate-100 pt-8 lg:hidden">
+          <div className="mt-8 flex justify-center border-t border-slate-100 pt-6 lg:hidden">
             <PartnerMark tone="dark" label="Inteligencia laboral con el respaldo de" className="items-center" />
           </div>
 
