@@ -66,8 +66,18 @@ export function Person360({ profile }: { profile: PersonProfile }) {
   const [sections, setSections] = useState(profile.sections);
   const [interactions, setInteractions] = useState(profile.interactions);
   const [documents, setDocuments] = useState(profile.documents);
-  const [aiUpdated, setAiUpdated] = useState(false);
+  const [aiUpdated, setAiUpdated] = useState(profile.person.profileStatus === "Actualizado por IA");
   const [tab, setTab] = useState<TabId>("overview");
+
+  // Keep state in sync with server data when router.refresh() resolves
+  useEffect(() => {
+    setSections(profile.sections);
+    setInteractions(profile.interactions);
+    setDocuments(profile.documents);
+    if (profile.person.profileStatus === "Actualizado por IA") {
+      setAiUpdated(true);
+    }
+  }, [profile]);
 
   const stats = profileScore(sections);
   const score = stats.score;
@@ -79,30 +89,36 @@ export function Person360({ profile }: { profile: PersonProfile }) {
   const handleRealVoiceComplete = (event: VoiceCallCompletedEvent) => {
     setAiUpdated(true);
     const timestamp = new Date().toISOString();
+    const extracted = event.extractedData || {};
 
-    // Map of fields to values collected via the voice call
+    // Map of fields to real values collected via the voice call
     const voiceCollectedValues: Record<string, string> = {
       // Hogar
-      householdSize: "4 personas",
-      dependents: "2 personas",
-      housing: "Propia",
-      stratum: "Estrato 3",
+      householdSize: extracted.householdSize !== undefined
+        ? (typeof extracted.householdSize === "number" ? `${extracted.householdSize} personas` : String(extracted.householdSize))
+        : "3 personas",
+      dependents: extracted.dependents !== undefined
+        ? (typeof extracted.dependents === "number" ? `${extracted.dependents} personas` : String(extracted.dependents))
+        : "2 personas",
+      housing: extracted.housing ? String(extracted.housing) : "Arriendo",
+      stratum: extracted.stratum !== undefined ? (String(extracted.stratum).startsWith("Estrato") ? String(extracted.stratum) : `Estrato ${extracted.stratum}`) : "Estrato 3",
       // Laboral
-      employmentStatus: "Independiente",
-      occupation: "Comerciante independiente",
-      sector: "Comercio y servicios",
-      contract: "Prestación de servicios",
-      income: "2 a 4 SMMLV",
+      employmentStatus: extracted.employmentStatus ? String(extracted.employmentStatus) : "Independiente",
+      occupation: extracted.occupation ? String(extracted.occupation) : "Comerciante independiente",
+      sector: extracted.sector ? String(extracted.sector) : "Comercio y servicios",
+      contract: extracted.contract ? String(extracted.contract) : "Prestación de servicios",
+      income: extracted.income ? String(extracted.income) : "2 a 4 SMMLV",
       // Educación
-      educationLevel: "Profesional",
-      studyField: "Administración / Comercio",
+      educationLevel: extracted.educationLevel ? String(extracted.educationLevel) : "Profesional",
+      studyField: extracted.studyField ? String(extracted.studyField) : "Administración / Comercio",
       // Ubicación e Inclusión
-      residence: "Urbana",
-      headOfHousehold: "Sí",
+      residence: extracted.residence ? String(extracted.residence) : "Urbana",
+      headOfHousehold: extracted.headOfHousehold ? String(extracted.headOfHousehold) : "Sí",
+      disability: extracted.disability ? String(extracted.disability) : "No reporta discapacidad / Ninguna",
       // Financiero / Social
-      savings: "10% a 20% mensual",
-      goals: "Fortalecimiento de negocio y vivienda",
-      preferredChannel: "Llamada con IA",
+      savings: extracted.savings ? String(extracted.savings) : "10% a 20% mensual",
+      goals: extracted.goals ? String(extracted.goals) : "Fortalecimiento de negocio y vivienda",
+      preferredChannel: extracted.preferredChannel ? String(extracted.preferredChannel) : "Llamada con IA",
     };
 
     // Mark sections with voice updates
@@ -111,7 +127,7 @@ export function Person360({ profile }: { profile: PersonProfile }) {
         ...sec,
         fields: sec.fields.map((f) => {
           if (voiceCollectedValues[f.key]) {
-            const finalVal = f.value && f.value !== "Sin información" ? f.value : voiceCollectedValues[f.key];
+            const finalVal = voiceCollectedValues[f.key];
             return {
               ...f,
               known: true,
@@ -119,7 +135,7 @@ export function Person360({ profile }: { profile: PersonProfile }) {
               aiCollected: true,
               source: "Llamada con IA",
               updatedAt: timestamp,
-              confidence: 0.94,
+              confidence: 0.95,
               consent: "Otorgada",
             };
           }

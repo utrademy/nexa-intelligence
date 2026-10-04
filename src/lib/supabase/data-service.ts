@@ -182,7 +182,18 @@ export async function fetchPersonProfileFromDb(id: string): Promise<PersonProfil
         // Check if we have a base known value
         const val = baseValues[f.key];
         const isAlwaysKnown = f.key === "fullName" || f.key === "nationalId" || f.key === "memberSince";
-        const isSpecificKnown = val && val !== "Sin información" && (f.key === "mobile" || f.key === "email" || f.key === "employmentStatus" || f.key === "educationLevel" || f.key === "residence");
+        const isSpecificKnown =
+          val &&
+          val !== "Sin información" &&
+          (f.key === "mobile" ||
+            f.key === "email" ||
+            f.key === "address" ||
+            f.key === "birthDate" ||
+            f.key === "employmentStatus" ||
+            f.key === "occupation" ||
+            f.key === "educationLevel" ||
+            f.key === "products" ||
+            f.key === "residence");
 
         if (isAlwaysKnown || isSpecificKnown) {
           return {

@@ -79,6 +79,9 @@ export async function GET(request: Request) {
       }
     }
 
+    const normalized = statusData.rawCallData ? voiceProvider.normalizeCallResult(statusData.rawCallData) : null;
+    const extractedData = normalized?.rawStructured || statusData.rawCallData?.analysis?.structuredData || {};
+
     return NextResponse.json({
       callId,
       status: statusData.status,
@@ -89,6 +92,7 @@ export async function GET(request: Request) {
       dbUpdated,
       newScore,
       fieldsUpdated: fieldsUpdated || [],
+      extractedData,
       error: statusData.error,
       endedReason: statusData.endedReason,
     });

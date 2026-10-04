@@ -101,6 +101,7 @@ export interface VoiceCallCompletedEvent {
   fieldsUpdated: string[];
   consentStatus: "Otorgada" | "Denegada";
   summary: string;
+  extractedData?: Record<string, any>;
 }
 
 export function AiCharacterizationCard({
@@ -343,6 +344,7 @@ export function AiCharacterizationCard({
                 fieldsUpdated: fieldsList,
                 consentStatus: "Otorgada",
                 summary: "Llamada con IA · Caracterización completada en vivo",
+                extractedData: statusData.extractedData || {},
               };
               setVoiceResult(completedEvt);
               if (onRealVoiceComplete) onRealVoiceComplete(completedEvt);

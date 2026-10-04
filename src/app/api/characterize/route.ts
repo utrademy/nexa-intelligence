@@ -56,7 +56,20 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       }));
 
-      await supabase.from("person_attributes").upsert(rows, { onConflict: "person_id, attribute_key" });
+      const keys = rows.map((r) => r.attribute_key);
+      await supabase
+        .from("person_attributes")
+        .delete()
+        .eq("person_id", personId)
+        .in("attribute_key", keys);
+
+      const { error: insErr } = await supabase
+        .from("person_attributes")
+        .insert(rows);
+
+      if (insErr) {
+        console.error("[characterize] Error inserting person_attributes:", insErr);
+      }
     }
 
     // 3. Insert interaction record

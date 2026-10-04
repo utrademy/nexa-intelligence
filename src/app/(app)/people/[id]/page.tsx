@@ -15,5 +15,10 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
   const { id } = await params;
   const profile = await getPersonProfile(id);
   if (!profile) notFound();
-  return <Person360 key={profile.person.id} profile={profile} />;
+  return (
+    <Person360
+      key={`${profile.person.id}-${profile.person.characterization}-${profile.person.profileStatus}`}
+      profile={profile}
+    />
+  );
 }

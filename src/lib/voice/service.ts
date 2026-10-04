@@ -347,7 +347,20 @@ export async function persistVoiceCharacterization(
   fieldsUpdated.push("Canal de contacto preferido");
 
   if (attributeRows.length > 0) {
-    await supabase.from("person_attributes").upsert(attributeRows, { onConflict: "person_id, attribute_key" });
+    const keys = attributeRows.map((r) => r.attribute_key);
+    await supabase
+      .from("person_attributes")
+      .delete()
+      .eq("person_id", result.personId)
+      .in("attribute_key", keys);
+
+    const { error: insErr } = await supabase
+      .from("person_attributes")
+      .insert(attributeRows);
+
+    if (insErr) {
+      console.error("[persistVoiceCharacterization] Error inserting person_attributes:", insErr);
+    }
   }
 
   // 6. Recalculate completeness score accurately
