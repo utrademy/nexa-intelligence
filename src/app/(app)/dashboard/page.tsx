@@ -22,7 +22,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { PartnerMark } from "@/components/brand/Logo";
-import { ClientsCarousel } from "@/components/brand/ClientsCarousel";
 import { CampaignCard } from "@/components/campaigns/CampaignCard";
 import { BarSeriesChart, ChartLegend, DonutChart } from "@/components/charts/Charts";
 import { AiInsightCard } from "@/components/dashboard/AiInsightCard";
@@ -77,9 +76,6 @@ export default async function DashboardPage() {
                 <h2 className="text-[28px] leading-tight font-semibold tracking-tight">Buenos días</h2>
                 <div className="flex items-center gap-2">
                   <span className="text-[15px] font-medium text-indigo-200">Financiera Comultrasan</span>
-                  <span className="rounded-md border border-white/20 bg-white/10 px-2 py-0.5 text-[10.5px] font-medium text-indigo-100">
-                    Entorno POC · datos en PostgreSQL
-                  </span>
                 </div>
               </div>
             </div>
@@ -365,9 +361,6 @@ export default async function DashboardPage() {
               <h3 className="text-[17px] font-semibold text-slate-900">
                 Inteligencia de Inclusión, Incapacidades y Discapacidad
               </h3>
-              <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                Punto Clave de Venta
-              </span>
             </div>
             <p className="text-[13px] leading-relaxed text-slate-600">
               Diagnóstico fáctico sobre la población respecto a reporte de condiciones de discapacidad, incapacidades laborales permanentes y autorreconocimiento. Esta brecha representa la mayor oportunidad de recolección proactiva mediante NEXA Voice AI.
@@ -536,11 +529,6 @@ export default async function DashboardPage() {
           ))}
         </div>
       </Card>
-
-      {/* 9. POTENCIALES CLIENTES INSTITUCIONALES */}
-      <section className="min-w-0">
-        <ClientsCarousel variant="dashboard" />
-      </section>
     </div>
   );
 }
