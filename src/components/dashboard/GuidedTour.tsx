@@ -4,18 +4,34 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
+  Bot,
+  Brain,
   CheckCircle2,
   Compass,
+  FileCheck2,
+  FileText,
+  Filter,
+  GraduationCap,
+  HardHat,
+  HeartPulse,
+  HelpCircle,
   LayoutDashboard,
+  Layers,
+  MapPin,
   Megaphone,
+  Mic,
   PhoneCall,
   Scale,
+  Search,
   Sparkles,
+  TrendingUp,
+  UserCheck,
   Users,
+  Volume2,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/format";
 
@@ -31,6 +47,7 @@ export interface TourStep {
   destinationLabel: string;
   icon: typeof LayoutDashboard;
   iconBg: string;
+  renderIllustration: () => React.ReactNode;
 }
 
 const TOUR_STEPS: TourStep[] = [
@@ -51,6 +68,73 @@ const TOUR_STEPS: TourStep[] = [
     destinationLabel: "Ver Resumen Ejecutivo",
     icon: LayoutDashboard,
     iconBg: "from-indigo-600 to-indigo-800 text-white shadow-indigo-500/25",
+    renderIllustration: () => (
+      <div className="relative h-44 w-full overflow-hidden rounded-2xl bg-linear-to-br from-slate-900 via-ink-900 to-indigo-950 p-4 text-white shadow-inner">
+        {/* Subtle grid pattern background */}
+        <div className="absolute inset-0 bg-grid opacity-20" />
+        <div className="absolute -top-12 -right-8 h-28 w-28 rounded-full bg-indigo-500/30 blur-2xl" />
+        <div className="absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-cyan-500/20 blur-2xl" />
+
+        <div className="relative z-10 flex h-full flex-col justify-between">
+          {/* Top Bar with mock app header */}
+          <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-500/30 text-indigo-300">
+                <LayoutDashboard className="h-3.5 w-3.5" />
+              </span>
+              <span className="text-[12px] font-semibold tracking-wide text-slate-200">
+                Panel Ejecutivo de Inteligencia
+              </span>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 border border-emerald-500/30">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              En vivo
+            </span>
+          </div>
+
+          {/* Mini Cards Grid */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-2.5 backdrop-blur-xs">
+              <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                <Users className="h-3 w-3 text-indigo-400" />
+                Población
+              </div>
+              <div className="mt-1 text-[15px] font-bold text-white tracking-tight">23.746</div>
+              <div className="text-[9.5px] text-emerald-400 font-medium">95.8% contactable</div>
+            </div>
+
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-2.5 backdrop-blur-xs">
+              <div className="flex items-center gap-1 text-[10px] text-amber-300">
+                <HeartPulse className="h-3 w-3 text-amber-400" />
+                Discapacidad
+              </div>
+              <div className="mt-1 text-[15px] font-bold text-amber-200 tracking-tight">99.9%</div>
+              <div className="text-[9.5px] text-amber-300/80 font-medium">Brecha prioritaria</div>
+            </div>
+
+            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 p-2.5 backdrop-blur-xs">
+              <div className="flex items-center gap-1 text-[10px] text-cyan-300">
+                <Sparkles className="h-3 w-3 text-cyan-400" />
+                Enriquecidos IA
+              </div>
+              <div className="mt-1 text-[15px] font-bold text-cyan-200 tracking-tight">16.2K</div>
+              <div className="text-[9.5px] text-cyan-300/80 font-medium">68.3% completado</div>
+            </div>
+          </div>
+
+          {/* Mini Progress Bar */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-[10px] text-slate-300">
+              <span>Cobertura de Caracterización Global</span>
+              <span className="font-semibold text-indigo-300">68%</span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div className="h-full w-[68%] rounded-full bg-linear-to-r from-indigo-500 via-purple-500 to-cyan-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
   },
   {
     id: "people",
@@ -69,6 +153,84 @@ const TOUR_STEPS: TourStep[] = [
     destinationLabel: "Ir a Inteligencia de Personas",
     icon: Users,
     iconBg: "from-blue-600 to-cyan-600 text-white shadow-blue-500/25",
+    renderIllustration: () => (
+      <div className="relative h-44 w-full overflow-hidden rounded-2xl bg-linear-to-br from-slate-50 via-slate-100 to-blue-50/40 p-4 border border-slate-200/80 shadow-inner">
+        <div className="flex flex-col h-full justify-between">
+          {/* Mock Search Bar & Filters */}
+          <div className="flex items-center gap-2">
+            <div className="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 shadow-2xs">
+              <Search className="h-3.5 w-3.5 text-slate-400" />
+              <span className="text-[11.5px] text-slate-500">Buscar por nombre o cédula...</span>
+            </div>
+            <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-700 shadow-2xs">
+              <Filter className="h-3 w-3 text-indigo-600" />
+              <span>Filtros</span>
+            </div>
+          </div>
+
+          {/* Mock Person Cards / Row Preview */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-tr from-indigo-500 to-cyan-500 text-[11px] font-bold text-white shadow-xs">
+                  CR
+                </div>
+                <div>
+                  <div className="text-[12px] font-semibold text-slate-900 leading-tight">
+                    Carlos Alberto Rodríguez
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                    <span className="flex items-center gap-0.5">
+                      <MapPin className="h-2.5 w-2.5 text-slate-400" />
+                      Bucaramanga
+                    </span>
+                    <span>·</span>
+                    <span className="font-medium text-slate-600">Empleado</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
+                  Perfil 64%
+                </span>
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100">
+                  <PhoneCall className="h-3 w-3" />
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-slate-200/90 bg-white p-2.5 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-tr from-violet-500 to-pink-500 text-[11px] font-bold text-white shadow-xs">
+                  MG
+                </div>
+                <div>
+                  <div className="text-[12px] font-semibold text-slate-900 leading-tight">
+                    María Elena Gómez
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                    <span className="flex items-center gap-0.5">
+                      <MapPin className="h-2.5 w-2.5 text-slate-400" />
+                      Floridablanca
+                    </span>
+                    <span>·</span>
+                    <span className="font-medium text-amber-700">Discapacidad pendiente</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 border border-amber-200">
+                  Perfil 32%
+                </span>
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100">
+                  <PhoneCall className="h-3 w-3" />
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ),
   },
   {
     id: "campaigns",
@@ -87,6 +249,66 @@ const TOUR_STEPS: TourStep[] = [
     destinationLabel: "Explorar Campañas con IA",
     icon: Megaphone,
     iconBg: "from-violet-600 to-purple-700 text-white shadow-violet-500/25",
+    renderIllustration: () => (
+      <div className="relative h-44 w-full overflow-hidden rounded-2xl bg-linear-to-br from-indigo-950 via-slate-900 to-violet-950 p-4 text-white shadow-inner">
+        <div className="absolute inset-0 bg-grid opacity-20" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-32 w-32 rounded-full bg-violet-600/25 blur-3xl" />
+
+        <div className="relative z-10 flex h-full flex-col justify-between">
+          {/* Header of Active Call simulation */}
+          <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-violet-500/30 text-violet-300">
+                <Mic className="h-3.5 w-3.5" />
+              </span>
+              <span className="text-[12px] font-semibold text-slate-200">
+                Agente de Voz NEXA (VAPI / Retell)
+              </span>
+            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] font-semibold text-violet-300 border border-violet-500/30">
+              Acento Colombiano
+            </span>
+          </div>
+
+          {/* Sound Wave Animation / Conversation mockup */}
+          <div className="my-auto flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-linear-to-tr from-violet-600 to-indigo-500 text-white shadow-md shadow-violet-500/30">
+                <Volume2 className="h-5 w-5 animate-pulse" />
+              </div>
+              <div>
+                <div className="text-[11.5px] font-semibold text-white">
+                  Llamando a Laura Mantilla
+                </div>
+                <div className="text-[10px] text-slate-300 italic">
+                  &ldquo;¿Cuenta con alguna condición de salud o discapacidad?&rdquo;
+                </div>
+              </div>
+            </div>
+
+            {/* Simulated Animated Bars */}
+            <div className="flex items-center gap-1">
+              <span className="h-3 w-1 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="h-6 w-1 rounded-full bg-indigo-400 animate-pulse delay-75" />
+              <span className="h-8 w-1 rounded-full bg-violet-400 animate-pulse delay-150" />
+              <span className="h-5 w-1 rounded-full bg-pink-400 animate-pulse delay-200" />
+              <span className="h-3 w-1 rounded-full bg-cyan-400 animate-pulse" />
+            </div>
+          </div>
+
+          {/* Campaign target summary badge */}
+          <div className="flex items-center justify-between text-[10.5px] text-slate-300">
+            <span className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+              Auto-actualización directa en Postgres / Supabase
+            </span>
+            <span className="rounded-md bg-emerald-500/20 px-1.5 py-0.5 text-emerald-300 font-semibold text-[9.5px]">
+              Modo Seguro Activo
+            </span>
+          </div>
+        </div>
+      </div>
+    ),
   },
   {
     id: "labor-ai",
@@ -105,6 +327,55 @@ const TOUR_STEPS: TourStep[] = [
     destinationLabel: "Consultar a NEXA Laboral AI",
     icon: Scale,
     iconBg: "from-emerald-600 to-teal-700 text-white shadow-emerald-500/25",
+    renderIllustration: () => (
+      <div className="relative h-44 w-full overflow-hidden rounded-2xl bg-linear-to-br from-slate-900 via-slate-950 to-emerald-950 p-4 text-white shadow-inner">
+        <div className="absolute inset-0 bg-grid opacity-20" />
+        <div className="absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-emerald-600/25 blur-3xl" />
+
+        <div className="relative z-10 flex h-full flex-col justify-between">
+          {/* Header with Sergio Flórez badge */}
+          <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/30 text-emerald-300">
+                <Scale className="h-3.5 w-3.5" />
+              </span>
+              <span className="text-[12px] font-semibold text-slate-200">
+                NEXA Laboral AI · Chat Jurídico
+              </span>
+            </div>
+            <span className="rounded-md bg-amber-400/20 px-2 py-0.5 text-[9.5px] font-semibold text-amber-300 border border-amber-400/30">
+              Sergio Flórez Abogados
+            </span>
+          </div>
+
+          {/* Mock Chat Exchange */}
+          <div className="space-y-2">
+            {/* User prompt mock */}
+            <div className="flex justify-end">
+              <div className="max-w-[80%] rounded-xl rounded-tr-none bg-indigo-600/80 px-3 py-1.5 text-[11px] text-white shadow-xs">
+                ¿Qué amparo otorga la estabilidad reforzada por discapacidad?
+              </div>
+            </div>
+
+            {/* AI Response mock */}
+            <div className="flex items-start gap-2">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-500/30 text-emerald-300 mt-0.5">
+                <Bot className="h-3.5 w-3.5" />
+              </div>
+              <div className="max-w-[85%] rounded-xl rounded-tl-none border border-white/10 bg-white/5 p-2 text-[10.5px] leading-relaxed text-slate-200">
+                Según el <span className="font-semibold text-emerald-300">Art. 26 Ley 361 de 1997</span> y la jurisprudencia de la Corte Constitucional, requiere autorización previa del Ministerio de Trabajo.
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Legal Reference Footer */}
+          <div className="flex items-center gap-2 text-[10px] text-slate-400 border-t border-white/10 pt-1.5">
+            <FileText className="h-3 w-3 text-emerald-400" />
+            <span>Respaldado con Código Sustantivo del Trabajo y Ley 2466 de 2025</span>
+          </div>
+        </div>
+      </div>
+    ),
   },
   {
     id: "knowledge",
@@ -123,6 +394,90 @@ const TOUR_STEPS: TourStep[] = [
     destinationLabel: "Ver Centro de Conocimiento",
     icon: BookOpen,
     iconBg: "from-amber-600 to-orange-600 text-white shadow-amber-500/25",
+    renderIllustration: () => (
+      <div className="relative h-44 w-full overflow-hidden rounded-2xl bg-linear-to-br from-amber-50/70 via-slate-50 to-orange-50/50 p-4 border border-amber-200/70 shadow-inner">
+        <div className="flex flex-col h-full justify-between">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-amber-200/50 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/20 text-amber-800">
+                <BookOpen className="h-3.5 w-3.5" />
+              </span>
+              <span className="text-[12px] font-semibold text-slate-800">
+                Documentos & Fuentes Jurídicas Indexadas
+              </span>
+            </div>
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 border border-emerald-200">
+              Vectorizado
+            </span>
+          </div>
+
+          {/* Grid of Documents */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 shadow-2xs">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                <FileCheck2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold text-slate-900 truncate">
+                  Ley 2466 de 2025
+                </div>
+                <div className="text-[9.5px] text-slate-500 truncate">
+                  Reforma Laboral Colombia
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 shadow-2xs">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+                <FileCheck2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold text-slate-900 truncate">
+                  Ley 361 de 1997
+                </div>
+                <div className="text-[9.5px] text-slate-500 truncate">
+                  Protección e Inclusión
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 shadow-2xs">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                <FileCheck2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold text-slate-900 truncate">
+                  Sentencias Corte Const.
+                </div>
+                <div className="text-[9.5px] text-slate-500 truncate">
+                  Estabilidad Ocupacional
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 shadow-2xs">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                <FileCheck2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold text-slate-900 truncate">
+                  Código Sustantivo Trabajo
+                </div>
+                <div className="text-[9.5px] text-slate-500 truncate">
+                  Régimen Laboral Completo
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-[10.5px] text-slate-500 pt-1">
+            <span>Búsqueda semántica integrada al chat</span>
+            <span className="font-medium text-indigo-600">Alimentación Continua</span>
+          </div>
+        </div>
+      </div>
+    ),
   },
 ];
 
@@ -163,7 +518,7 @@ export function GuidedTourButton({ className }: { className?: string }) {
     setOpen(true);
   };
 
-  // Close on Escape key
+  // Close on Escape key or keyboard navigation
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -197,7 +552,7 @@ export function GuidedTourButton({ className }: { className?: string }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity animate-fade-in"
+            className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs transition-opacity animate-fade-in"
             onClick={handleClose}
           />
 
@@ -205,7 +560,7 @@ export function GuidedTourButton({ className }: { className?: string }) {
           <div
             role="dialog"
             aria-modal="true"
-            className="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-2xl shadow-slate-950/30 animate-scale-in"
+            className="relative z-10 w-full max-w-xl overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-2xl shadow-slate-950/30 animate-scale-in"
           >
             {/* Top decorative gradient bar */}
             <div className="h-1.5 w-full bg-linear-to-r from-indigo-500 via-purple-500 to-cyan-400" />
@@ -235,38 +590,44 @@ export function GuidedTourButton({ className }: { className?: string }) {
               </button>
             </div>
 
-            {/* Step Content */}
-            <div className="px-6 py-5">
-              <div className="flex items-start gap-4">
+            {/* Step Content with Illustration Banner */}
+            <div className="px-6 py-5 space-y-4 max-h-[75vh] overflow-y-auto no-scrollbar">
+              {/* REPRESENTATIVE ILLUSTRATION / PREVIEW CARD */}
+              <div className="w-full">
+                {currentStep.renderIllustration()}
+              </div>
+
+              {/* Title and Icon */}
+              <div className="flex items-start gap-3.5 pt-1">
                 <div
                   className={cn(
-                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br shadow-md",
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br shadow-md",
                     currentStep.iconBg,
                   )}
                 >
-                  <IconComponent className="h-6 w-6" />
+                  <IconComponent className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-[18px] font-semibold tracking-tight text-slate-900">
+                  <h3 className="text-[18px] font-semibold tracking-tight text-slate-900 leading-snug">
                     {currentStep.title}
                   </h3>
-                  <p className="mt-0.5 text-[13px] font-medium text-indigo-600">
+                  <p className="mt-0.5 text-[12.5px] font-medium text-indigo-600">
                     {currentStep.headline}
                   </p>
                 </div>
               </div>
 
-              <p className="mt-4 text-[13.5px] leading-relaxed text-slate-600">
+              <p className="text-[13px] leading-relaxed text-slate-600">
                 {currentStep.description}
               </p>
 
               {/* Highlights bullet cards */}
-              <div className="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-3.5">
+              <div className="space-y-1.5 rounded-2xl border border-slate-100 bg-slate-50/80 p-3.5">
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                   Capacidades principales:
                 </div>
                 {currentStep.highlights.map((h, i) => (
-                  <div key={i} className="flex items-start gap-2 text-[12.5px] text-slate-700">
+                  <div key={i} className="flex items-start gap-2 text-[12px] text-slate-700">
                     <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
                     <span>{h}</span>
                   </div>
@@ -274,8 +635,8 @@ export function GuidedTourButton({ className }: { className?: string }) {
               </div>
 
               {/* Destination Direct Link */}
-              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-[12px]">
-                <span className="text-slate-400">Acceso directo a la vista:</span>
+              <div className="flex items-center justify-between border-t border-slate-100 pt-3 text-[12px]">
+                <span className="text-slate-400">Ir a esta sección en vivo:</span>
                 <Link
                   href={currentStep.destinationHref}
                   onClick={handleClose}
@@ -288,7 +649,7 @@ export function GuidedTourButton({ className }: { className?: string }) {
             </div>
 
             {/* Step Indicators / Dots */}
-            <div className="flex items-center justify-center gap-1.5 px-6 pb-2">
+            <div className="flex items-center justify-center gap-1.5 px-6 pb-2 pt-1 border-t border-slate-100/60">
               {TOUR_STEPS.map((step, idx) => (
                 <button
                   key={step.id}
@@ -306,7 +667,7 @@ export function GuidedTourButton({ className }: { className?: string }) {
             </div>
 
             {/* Footer Navigation */}
-            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-6 py-3.5">
+            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 px-6 py-3.5">
               <button
                 type="button"
                 onClick={handlePrev}
