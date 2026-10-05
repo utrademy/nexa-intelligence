@@ -166,6 +166,10 @@ export function LoginView() {
           <div className="mt-5">
             <IntroVideo variant="login-card" />
           </div>
+
+          <div className="mt-8 flex justify-center border-t border-slate-200/80 pt-6">
+            <PartnerMark tone="dark" label="Inteligencia laboral con el respaldo de" className="items-center" />
+          </div>
         </div>
       </div>
     </div>
