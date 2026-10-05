@@ -53,6 +53,7 @@ export const VOICE_CAMPAIGN_OBJECTIVES = [
   {
     id: "integral_100",
     title: "Caracterización integral 100% (Perfil total)",
+    shortTitle: "Integral 100%",
     badge: "100% Cobertura",
     badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
     desc: "Cierra exhaustivamente las 7 dimensiones (34 campos) para completar el perfil al 100%.",
@@ -60,6 +61,7 @@ export const VOICE_CAMPAIGN_OBJECTIVES = [
   {
     id: "completar_caracterizacion",
     title: "Vacíos críticos (~70%)",
+    shortTitle: "Vacíos críticos",
     badge: "Críticos",
     badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200",
     desc: "Enfocado en vivienda, estrato, personas en el hogar, empleo, ingresos, salud y metas.",
@@ -67,6 +69,7 @@ export const VOICE_CAMPAIGN_OBJECTIVES = [
   {
     id: "actualizar_informacion",
     title: "Actualización de información (~60%)",
+    shortTitle: "Actualización",
     badge: "Laboral",
     badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
     desc: "Renovación ágil de contacto, ocupación actual, antigüedad en la actividad e ingresos.",
@@ -74,6 +77,7 @@ export const VOICE_CAMPAIGN_OBJECTIVES = [
   {
     id: "encuesta_validacion",
     title: "Validación y Ley 1581",
+    shortTitle: "Ley 1581",
     badge: "Consentimiento",
     badgeColor: "bg-sky-100 text-sky-800 border-sky-200",
     desc: "Validación de identidad y consentimiento expreso para tratamiento de datos personales.",
@@ -172,6 +176,19 @@ export function AiCharacterizationCard({
   const [activeCallId, setActiveCallId] = useState<string | null>(null);
   const [voiceResult, setVoiceResult] = useState<VoiceCallCompletedEvent | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+
+  // Load saved test phone from localStorage if available
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nexa_poc_phone");
+      if (saved && saved.startsWith("+") && saved.length >= 10) {
+        setAuthorizedPhone(saved);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Cancel active call in progress
   const cancelActiveCall = async () => {
@@ -264,8 +281,15 @@ export function AiCharacterizationCard({
   const startRealVoiceCall = async () => {
     const cleanPhone = authorizedPhone.trim().replace(/\s+/g, "");
     if (!cleanPhone.startsWith("+") || cleanPhone.length < 10) {
-      setVoiceError("Por favor ingrese un número válido con código de país (ej. +573001234567 o +1305...)");
+      setVoiceError("Por favor ingrese el número telefónico completo con indicativo internacional (ejemplo: +57 300 123 4567 o +1 305...).");
+      phoneInputRef.current?.focus();
       return;
+    }
+
+    try {
+      localStorage.setItem("nexa_poc_phone", cleanPhone);
+    } catch {
+      // ignore
     }
 
     setVoiceError(null);
@@ -586,16 +610,16 @@ export function AiCharacterizationCard({
             }
           }}
         >
-          <div className="relative flex max-h-[88vh] sm:max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+          <div className="relative flex max-h-[calc(100dvh-1.5rem)] sm:max-h-[660px] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             {/* MODAL HEADER (FIJO) */}
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 sm:px-6 py-4">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 sm:px-6 py-3.5">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-md shadow-violet-500/30">
                   <PhoneCall className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-[16px] font-semibold text-slate-900">Completar perfil con IA</h3>
-                  <p className="text-[12px] text-slate-500">Llamada telefónica outbound en tiempo real</p>
+                  <h3 className="text-[15.5px] font-bold text-slate-900">Completar perfil con IA</h3>
+                  <p className="text-[11.5px] text-slate-500">Llamada telefónica outbound en tiempo real</p>
                 </div>
               </div>
               <button
@@ -609,8 +633,8 @@ export function AiCharacterizationCard({
             </div>
 
             {/* MODAL BODY (SCROLLABLE) */}
-            <div className="scrollbar-thin flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
-              <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 text-[13px]">
+            <div className="scrollbar-thin flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-3.5">
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3 text-[12.5px]">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500">Canal:</span>
                   <span className="flex items-center gap-1.5 font-semibold text-violet-700">
@@ -618,11 +642,11 @@ export function AiCharacterizationCard({
                     Llamada con IA
                   </span>
                 </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-slate-500">Persona:</span>
-                  <span className="font-semibold text-slate-900">{fullName}</span>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <span className="text-slate-500">Asociado:</span>
+                  <span className="font-bold text-slate-900">{fullName}</span>
                 </div>
-                <div className="mt-2 flex items-center justify-between">
+                <div className="mt-1.5 flex items-center justify-between">
                   <span className="text-slate-500">Completitud actual:</span>
                   <span className="font-semibold text-indigo-600 tabular-nums">{score} %</span>
                 </div>
@@ -630,56 +654,101 @@ export function AiCharacterizationCard({
 
               {/* SELECTOR DE ESTILO DE CAMPAÑA / OBJETIVO */}
               <div>
-                <label className="block text-[12.5px] font-medium text-slate-700">
-                  Estilo de campaña / Objetivo de la llamada:
+                <label className="block text-[12px] font-bold uppercase tracking-wider text-slate-700">
+                  1. Estilo de campaña / Objetivo:
                 </label>
-                <div className="mt-1.5 space-y-2">
-                  {VOICE_CAMPAIGN_OBJECTIVES.map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      disabled={voiceCallStatus === "calling" || voiceCallStatus === "in-progress" || voiceCallStatus === "processing"}
-                      onClick={() => setSelectedObjective(opt.id)}
-                      className={cn(
-                        "w-full rounded-xl border p-2.5 text-left transition disabled:opacity-60",
-                        selectedObjective === opt.id
-                          ? "border-violet-500 bg-violet-50/70 ring-2 ring-violet-500/20 shadow-xs"
-                          : "border-slate-200 hover:border-slate-300 bg-white",
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[12.5px] font-semibold text-slate-900">{opt.title}</span>
-                        <span className={cn("rounded-md border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide", opt.badgeColor)}>
-                          {opt.badge}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[11px] text-slate-500 leading-snug">{opt.desc}</p>
-                    </button>
-                  ))}
+                <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {VOICE_CAMPAIGN_OBJECTIVES.map((opt) => {
+                    const isSelected = selectedObjective === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        disabled={voiceCallStatus === "calling" || voiceCallStatus === "in-progress" || voiceCallStatus === "processing"}
+                        onClick={() => {
+                          setSelectedObjective(opt.id);
+                          setVoiceError(null);
+                        }}
+                        className={cn(
+                          "relative flex flex-col justify-between rounded-xl border p-2.5 text-left transition-all disabled:opacity-60",
+                          isSelected
+                            ? "border-violet-600 bg-violet-50/90 ring-2 ring-violet-500/25 shadow-xs"
+                            : "border-slate-200 bg-white hover:border-violet-300 hover:bg-slate-50/70",
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className={cn("text-[12px] font-bold", isSelected ? "text-violet-950" : "text-slate-900")}>
+                            {opt.shortTitle}
+                          </span>
+                          <span className={cn("rounded-md border px-1.5 py-0.5 text-[9.5px] font-semibold tracking-wide", opt.badgeColor)}>
+                            {opt.badge}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500 leading-snug line-clamp-2">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* PHONE INPUT & POC SAFETY BANNER */}
               <div>
-                <label className="block text-[12.5px] font-medium text-slate-700">
-                  Número de destino:
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-[12px] font-bold uppercase tracking-wider text-slate-700">
+                    2. Número de destino (Prueba):
+                  </label>
+                  {authorizedPhone && authorizedPhone.trim().replace(/\s+/g, "").length >= 10 && (
+                    <span className="text-[11px] font-medium text-violet-600">Recordado</span>
+                  )}
+                </div>
                 <input
-                  type="text"
+                  ref={phoneInputRef}
+                  type="tel"
                   value={authorizedPhone}
-                  onChange={(e) => setAuthorizedPhone(e.target.value)}
+                  onChange={(e) => {
+                    setAuthorizedPhone(e.target.value);
+                    if (voiceError) setVoiceError(null);
+                  }}
                   placeholder="+57 300 123 4567 o +1 305..."
                   disabled={voiceCallStatus === "calling" || voiceCallStatus === "in-progress" || voiceCallStatus === "processing"}
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-mono text-[14px] text-slate-900 shadow-xs focus:border-violet-500 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20 disabled:bg-slate-100"
+                  className={cn(
+                    "mt-1 w-full rounded-xl border px-3.5 py-2.5 font-mono text-[14px] text-slate-900 shadow-xs focus:outline-hidden focus:ring-2 disabled:bg-slate-100",
+                    voiceError && voiceCallStatus === "idle"
+                      ? "border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/20"
+                      : "border-slate-300 focus:border-violet-500 focus:ring-violet-500/20"
+                  )}
                 />
               </div>
 
-              <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-[12px] text-amber-900">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
-                <div>
-                  <b className="font-semibold">Entorno POC:</b> utilice únicamente un número autorizado para pruebas. El sistema nunca llama números sintéticos de la base de datos automáticamente.
+              {/* VALIDATION ERROR (VISIBLE IMMEDIATELY IN IDLE STATE) */}
+              {voiceError && voiceCallStatus === "idle" && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-rose-300 bg-rose-50 p-3 text-[12px] text-rose-800 animate-fade-in">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+                  <div className="flex-1 leading-snug">
+                    <span className="font-bold text-rose-900 block">Número telefónico incompleto o inválido:</span>
+                    {voiceError}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/80 p-2.5 text-[11.5px] text-amber-900">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 mt-0.5" />
+                <div className="leading-snug">
+                  <b className="font-semibold">Entorno de prueba seguro:</b> Digite el número celular donde desea recibir la llamada en vivo.
                 </div>
               </div>
+
+              {/* DIRECT CALL BUTTON INSIDE BODY */}
+              {voiceCallStatus === "idle" && (
+                <button
+                  type="button"
+                  onClick={startRealVoiceCall}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-violet-600 py-3 px-4 text-[13.5px] font-bold text-white shadow-md shadow-violet-500/25 transition hover:bg-violet-700 active:scale-[0.99]"
+                >
+                  <PhoneCall className="h-4 w-4" />
+                  Llamar ahora · {VOICE_CAMPAIGN_OBJECTIVES.find((o) => o.id === selectedObjective)?.shortTitle || "Iniciar"}
+                </button>
+              )}
 
               {/* CALL PROGRESS STATES */}
               {voiceCallStatus !== "idle" && (
@@ -801,7 +870,7 @@ export function AiCharacterizationCard({
             </div>
 
             {/* MODAL FOOTER (FIJO Y ACCESIBLE SIEMPRE) */}
-            <div className="flex items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/80 px-6 py-4">
+            <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/80 px-6 py-3.5">
               <button
                 type="button"
                 onClick={handleCloseVoiceModal}
@@ -817,7 +886,7 @@ export function AiCharacterizationCard({
                   className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-md shadow-violet-500/25 transition hover:bg-violet-700 active:scale-[0.98]"
                 >
                   <PhoneCall className="h-4 w-4" />
-                  INICIAR LLAMADA CON IA
+                  INICIAR LLAMADA ({VOICE_CAMPAIGN_OBJECTIVES.find((o) => o.id === selectedObjective)?.shortTitle || "IA"})
                 </button>
               ) : voiceCallStatus === "not_answered" || voiceCallStatus === "failed" ? (
                 <button

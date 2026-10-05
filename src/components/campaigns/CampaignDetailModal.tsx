@@ -87,6 +87,19 @@ export function CampaignDetailModal({
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const testPhoneInputRef = useRef<HTMLInputElement>(null);
+
+  // Load saved POC test phone from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nexa_poc_phone");
+      if (saved && saved.startsWith("+") && saved.length >= 10) {
+        setTestPhone(saved);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Cancel active demo call
   const cancelActiveCall = async () => {
@@ -202,8 +215,15 @@ export function CampaignDetailModal({
 
     const cleanPhone = testPhone.trim().replace(/\s+/g, "");
     if (!cleanPhone.startsWith("+") || cleanPhone.length < 10) {
-      setCallError("Por favor ingrese un número telefónico de prueba válido con código de país (ej. +573001234567 o +1305...)");
+      setCallError("Por favor ingrese un número telefónico de prueba válido con código de país (ej. +57 300 123 4567 o +1 305...).");
+      testPhoneInputRef.current?.focus();
       return;
+    }
+
+    try {
+      localStorage.setItem("nexa_poc_phone", cleanPhone);
+    } catch {
+      // ignore
     }
 
     setCallError(null);
@@ -554,18 +574,43 @@ export function CampaignDetailModal({
 
               {/* ENTER REAL AUTHORIZED PHONE */}
               <div>
-                <label className="block text-[12.5px] font-semibold text-slate-700">
-                  2. Ingrese el número telefónico de prueba autorizado:
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-[12.5px] font-semibold text-slate-700">
+                    2. Ingrese el número telefónico de prueba autorizado:
+                  </label>
+                  {testPhone && testPhone.trim().replace(/\s+/g, "").length >= 10 && (
+                    <span className="text-[11px] font-medium text-violet-600">Recordado</span>
+                  )}
+                </div>
                 <input
-                  type="text"
+                  ref={testPhoneInputRef}
+                  type="tel"
                   value={testPhone}
-                  onChange={(e) => setTestPhone(e.target.value)}
+                  onChange={(e) => {
+                    setTestPhone(e.target.value);
+                    if (callError) setCallError(null);
+                  }}
                   placeholder="+57 300 123 4567 o +1 305..."
                   disabled={callStatus === "calling" || callStatus === "in-progress" || callStatus === "processing"}
-                  className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-mono text-[14px] text-slate-900 shadow-xs focus:border-violet-500 focus:outline-hidden focus:ring-2 focus:ring-violet-500/20 disabled:bg-slate-100"
+                  className={cn(
+                    "mt-1.5 w-full rounded-xl border px-3.5 py-2.5 font-mono text-[14px] text-slate-900 shadow-xs focus:outline-hidden focus:ring-2 disabled:bg-slate-100",
+                    callError && callStatus === "idle"
+                      ? "border-rose-400 bg-rose-50/40 focus:border-rose-500 focus:ring-rose-500/20"
+                      : "border-slate-300 focus:border-violet-500 focus:ring-violet-500/20"
+                  )}
                 />
               </div>
+
+              {/* VALIDATION ERROR (VISIBLE IMMEDIATELY IN IDLE STATE) */}
+              {callError && callStatus === "idle" && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-rose-300 bg-rose-50 p-3 text-[12px] text-rose-800 animate-fade-in">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+                  <div className="flex-1 leading-snug">
+                    <span className="font-bold text-rose-900 block">Número telefónico incompleto o inválido:</span>
+                    {callError}
+                  </div>
+                </div>
+              )}
 
               {/* PROGRESS STATUS */}
               {callStatus !== "idle" && (
