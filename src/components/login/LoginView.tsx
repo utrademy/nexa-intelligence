@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Endorsement, Logo, LogoMark, PartnerMark } from "@/components/brand/Logo";
+import { ClientsCarousel } from "@/components/brand/ClientsCarousel";
 import { CURRENT_USER } from "@/components/layout/nav";
 import { IntroVideo } from "@/components/dashboard/IntroVideo";
 
@@ -19,15 +20,16 @@ export function LoginView() {
   const [loading, setLoading] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-white">
-      <div className="relative hidden w-[52%] overflow-hidden bg-ink-950 lg:flex lg:flex-col">
-        <div className="bg-grid absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]" />
-        <div className="absolute -top-40 -left-32 h-[480px] w-[480px] rounded-full bg-indigo-600/30 blur-[120px]" />
-        <div className="absolute -right-24 bottom-0 h-[420px] w-[420px] rounded-full bg-cyan-500/20 blur-[120px]" />
-        <div className="absolute top-1/3 left-1/2 h-72 w-72 rounded-full bg-violet-600/20 blur-[100px]" />
+    <div className="flex min-h-screen flex-col bg-white">
+      <div className="flex flex-1 flex-col lg:flex-row">
+        <div className="relative hidden w-[52%] overflow-hidden bg-ink-950 lg:flex lg:flex-col">
+          <div className="bg-grid absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]" />
+          <div className="absolute -top-40 -left-32 h-[480px] w-[480px] rounded-full bg-indigo-600/30 blur-[120px]" />
+          <div className="absolute -right-24 bottom-0 h-[420px] w-[420px] rounded-full bg-cyan-500/20 blur-[120px]" />
+          <div className="absolute top-1/3 left-1/2 h-72 w-72 rounded-full bg-violet-600/20 blur-[100px]" />
 
-        <div className="relative z-10 flex flex-1 flex-col justify-between p-12">
-          <Logo endorsed />
+          <div className="relative z-10 flex flex-1 flex-col justify-between p-12">
+            <Logo endorsed showIntelligence={false} />
 
           <div className="max-w-lg">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] font-medium text-indigo-200 backdrop-blur">
@@ -74,13 +76,13 @@ export function LoginView() {
       <div className="flex flex-1 items-center justify-center px-6 py-12">
         <div className="w-full max-w-[400px] animate-slide-up">
           <div className="mb-10 lg:hidden">
-            <Logo tone="dark" endorsed />
+            <Logo tone="dark" endorsed showIntelligence={false} />
           </div>
 
           <div className="hidden lg:block">
             <LogoMark className="h-11 w-11" />
           </div>
-          <h2 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900">Bienvenido a NEXA Intelligence</h2>
+          <h2 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900">Bienvenido a NEXA</h2>
           <Endorsement tone="dark" className="mt-1 hidden lg:block" />
           <p className="mt-3 text-[14px] text-slate-500">Conozca su gente. Entienda sus datos. Actúe con inteligencia.</p>
 
@@ -179,5 +181,11 @@ export function LoginView() {
         </div>
       </div>
     </div>
+
+    {/* SECCIÓN FINAL: CARRUSEL DE POTENCIALES CLIENTES */}
+    <section className="relative shrink-0 border-t border-slate-200/70 bg-slate-50/70 py-6 px-4 sm:px-8">
+      <ClientsCarousel variant="login" />
+    </section>
+  </div>
   );
 }

@@ -22,6 +22,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { PartnerMark } from "@/components/brand/Logo";
+import { ClientsCarousel } from "@/components/brand/ClientsCarousel";
 import { CampaignCard } from "@/components/campaigns/CampaignCard";
 import { BarSeriesChart, ChartLegend, DonutChart } from "@/components/charts/Charts";
 import { AiInsightCard } from "@/components/dashboard/AiInsightCard";
@@ -535,6 +536,11 @@ export default async function DashboardPage() {
           ))}
         </div>
       </Card>
+
+      {/* 9. POTENCIALES CLIENTES INSTITUCIONALES */}
+      <section className="min-w-0">
+        <ClientsCarousel variant="dashboard" />
+      </section>
     </div>
   );
 }

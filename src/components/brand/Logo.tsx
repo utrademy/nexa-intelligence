@@ -23,16 +23,18 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-export const ENDORSEMENT_LINE = "by Sergio Flórez Abogados";
+export const ENDORSEMENT_LINE = "by Sergio Flórez y Abogados";
 
 export function Logo({
   tone = "light",
   endorsed = false,
   className,
+  showIntelligence = true,
 }: {
   tone?: "light" | "dark";
   endorsed?: boolean;
   className?: string;
+  showIntelligence?: boolean;
 }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
@@ -41,9 +43,11 @@ export function Logo({
         <div className={cn("text-[15px] font-semibold tracking-[0.18em]", tone === "light" ? "text-white" : "text-slate-900")}>
           NEXA
         </div>
-        <div className={cn("mt-1 text-[10px] font-medium uppercase tracking-[0.22em]", tone === "light" ? "text-indigo-200/70" : "text-slate-500")}>
-          Intelligence
-        </div>
+        {showIntelligence && (
+          <div className={cn("mt-1 text-[10px] font-medium uppercase tracking-[0.22em]", tone === "light" ? "text-indigo-200/70" : "text-slate-500")}>
+            Intelligence
+          </div>
+        )}
         {endorsed && <Endorsement tone={tone} className="mt-1.5" />}
       </div>
     </div>
