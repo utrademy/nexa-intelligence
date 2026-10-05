@@ -213,3 +213,15 @@ export async function getKnowledgeData() {
     realIndexedCount: realCount,
   };
 }
+
+export async function getLaborContextStats() {
+  const analytics = await getDashboardAnalytics();
+  return {
+    organizationName: "Financiera Comultrasan",
+    organizationType: "Institución financiera cooperativa",
+    totalProfiles: analytics.totalProfiles,
+    averageScore: analytics.averageCharacterization,
+    contactablePercentage: analytics.contactablePercentage,
+    criticalGapsCount: analytics.criticalGapProfiles,
+  };
+}

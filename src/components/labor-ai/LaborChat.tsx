@@ -32,7 +32,7 @@ import { Card } from "@/components/ui/Card";
 import { DISCLAIMER, SUGGESTED_QUESTIONS } from "@/lib/mock/labor-ai";
 import { ENDORSEMENT } from "@/lib/mock/knowledge";
 import type { ChatMessage, KnowledgeArea, KnowledgeAreaId, LaborAiResponse, LaborAiTurn } from "@/lib/types";
-import { cn } from "@/lib/format";
+import { cn, formatNumber } from "@/lib/format";
 import { AssistantMessage, UserMessage } from "./ChatMessage";
 
 const ERROR_MESSAGE = "No fue posible generar el análisis en este momento. Inténtelo nuevamente.";
@@ -104,7 +104,22 @@ function KnowledgeEquation() {
   );
 }
 
-export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
+export interface LaborOrgContext {
+  organizationName: string;
+  organizationType: string;
+  totalProfiles: number;
+  averageScore: number;
+  contactablePercentage: number;
+  criticalGapsCount: number;
+}
+
+export function LaborChat({
+  areas,
+  orgContext,
+}: {
+  areas: KnowledgeArea[];
+  orgContext?: LaborOrgContext;
+}) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -562,15 +577,31 @@ export function LaborChat({ areas }: { areas: KnowledgeArea[] }) {
                 />
               </span>
               <div>
-                <div className="text-[13px] font-medium text-slate-800">Financiera Comultrasan</div>
-                <div className="text-[11.5px] text-slate-400">Institución financiera cooperativa · 480 empleados</div>
+                <div className="text-[13px] font-medium text-slate-800">
+                  {orgContext?.organizationName || "Financiera Comultrasan"}
+                </div>
+                <div className="text-[11.5px] text-slate-400">
+                  {orgContext?.organizationType || "Institución financiera cooperativa"}
+                </div>
               </div>
             </div>
             {[
-              { label: "Perfiles en base de datos", value: "10.000" },
-              { label: "Completitud promedio", value: "85,5 %" },
-              { label: "Perfiles contactables", value: "95,6 %" },
-              { label: "Vacíos críticos de información", value: "543" },
+              {
+                label: "Perfiles en base de datos",
+                value: formatNumber(orgContext?.totalProfiles ?? 23746),
+              },
+              {
+                label: "Completitud promedio",
+                value: `${orgContext?.averageScore ?? 68} %`,
+              },
+              {
+                label: "Perfiles contactables",
+                value: `${orgContext?.contactablePercentage ?? 95.8} %`,
+              },
+              {
+                label: "Vacíos críticos de información",
+                value: formatNumber(orgContext?.criticalGapsCount ?? 7528),
+              },
             ].map((r) => (
               <div key={r.label} className="flex items-center justify-between gap-3 text-[12.5px]">
                 <span className="text-slate-500">{r.label}</span>

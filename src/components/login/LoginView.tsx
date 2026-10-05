@@ -10,9 +10,9 @@ import { CURRENT_USER } from "@/components/layout/nav";
 import { IntroVideo } from "@/components/dashboard/IntroVideo";
 
 const HIGHLIGHTS = [
-  { value: "500 mil", label: "Asociados caracterizados" },
+  { value: "23,7 mil", label: "Asociados en base de datos" },
   { value: "68 %", label: "Cobertura de perfiles" },
-  { value: "18,4 mil", label: "Conversaciones con IA" },
+  { value: "95,8 %", label: "Contactabilidad validada" },
 ];
 
 export function LoginView() {

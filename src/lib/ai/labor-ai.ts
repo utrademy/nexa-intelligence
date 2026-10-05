@@ -47,7 +47,7 @@ REGLAS DE PRECISIÓN Y ANÁLISIS DE DATOS (ESTRICTAS Y OBLIGATORIAS)
 1. Cuando se le suministre un bloque "ORGANIZATIONAL DATA CONTEXT", las cifras que contiene provienen de consultas reales ejecutadas sobre la base de datos PostgreSQL en Supabase.
    - Use ESAS cifras exactas para sustentar su análisis.
    - NUNCA invente, modifique ni estime cifras organizacionales que contradigan o no figuren en los datos suministrados.
-   - Use ESAS cifras exactas para sustentar su análisis, basándose estrictamente en la población real de la base de datos POC (10.000 perfiles). Nunca extrapole ni invente cifras que no hayan sido suministradas.
+   - Use ESAS cifras exactas para sustentar su análisis, basándose estrictamente en la población real de la base de datos de la organización. Nunca extrapole ni invente cifras que no hayan sido suministradas.
 2. Si NO se le suministra un bloque de datos organizacionales (o la consulta es jurídica general), no invente estadísticas de la entidad.
 3. BASE DOCUMENTAL ESPECIALIZADA (RAG - SERGIO FLÓREZ & ABOGADOS):
    - Cuando se le suministre un bloque "DOCUMENT GROUNDING CONTEXT", los fragmentos provienen de documentos efectivamente recuperados mediante búsqueda vectorial en la base de conocimiento de Sergio Flórez & Abogados.
@@ -75,6 +75,7 @@ export function getModeInstructions(
   mode: "GENERAL" | "ORGANIZATIONAL" | "KNOWLEDGE" | "COMBINED",
   sampleSize?: number
 ): string {
+  const populationText = sampleSize ? Number(sampleSize).toLocaleString("es-CO") : "23.746";
   switch (mode) {
     case "COMBINED":
       return `
@@ -90,7 +91,7 @@ Síntesis ejecutiva de alto nivel para comités de gestión humana o directivos,
 
 ## HALLAZGOS EN LOS DATOS
 Inicie obligatoriamente con la frase exacta:
-"Muestra POC analizada: ${sampleSize ? Number(sampleSize).toLocaleString("es-CO") : "10.000"} perfiles sintéticos"
+"Muestra analizada: ${populationText} perfiles en base de datos"
 Describa las cifras numéricas y porcentajes exactos calculados directamente desde Supabase que sustentan la consulta (brechas de información laboral, estados de inclusión, completitud). NUNCA invente cifras.
 
 ## ANÁLISIS LABORAL
@@ -114,7 +115,7 @@ MODO DE OPERACIÓN ACTIVO: INTELIGENCIA ORGANIZACIONAL (DATOS SUPABASE)
 Estructure su respuesta en Markdown con estos encabezados:
 ## RESUMEN EJECUTIVO
 ## ANÁLISIS DE DATOS
-Inicie indicando: "Muestra POC analizada: ${sampleSize ? Number(sampleSize).toLocaleString("es-CO") : "10.000"} perfiles sintéticos"
+Inicie indicando: "Muestra analizada: ${populationText} perfiles en base de datos"
 ## HALLAZGOS RELEVANTES
 ## IMPLICACIONES LABORALES Y ORGANIZACIONALES
 ## INFORMACIÓN QUE DEBERÍA REVISARSE
@@ -153,6 +154,5 @@ Estructure su respuesta en Markdown con estos encabezados:
 
 export const DEMO_ORG_CONTEXT = `CONTEXTO DE LA ORGANIZACIÓN:
 - Organización: Financiera Comultrasan
-- Tipo: Cooperativa financiera
-- Colaboradores directos: 480 empleados
-- Población en base de datos POC: 10.000 perfiles analizados`;
+- Tipo: Institución financiera cooperativa
+- Población activa en base de datos: 23.746 asociados analizados`;
