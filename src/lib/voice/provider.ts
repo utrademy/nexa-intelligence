@@ -134,6 +134,26 @@ export interface StartCallParams {
   missingFields?: string[];
 }
 
+export function getColombianGreeting(): { greeting: string; farewell: string } {
+  try {
+    const colHourStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Bogota",
+      hour: "numeric",
+      hour12: false,
+    }).format(new Date());
+    const hour = parseInt(colHourStr, 10);
+    if (hour >= 5 && hour < 12) {
+      return { greeting: "buenos días", farewell: "un excelente día" };
+    }
+    if (hour >= 12 && hour < 19) {
+      return { greeting: "buenas tardes", farewell: "una excelente tarde" };
+    }
+    return { greeting: "buenas noches", farewell: "una excelente noche" };
+  } catch {
+    return { greeting: "buenos días", farewell: "un excelente día" };
+  }
+}
+
 /**
  * Generates the characterization assistant system prompt in Colombian Spanish.
  * Instructs the voice AI to introduce the call warmly on behalf of Financiera Comultrasan
@@ -204,6 +224,8 @@ Tu meta es validar la identidad del asociado, obtener formalmente su autorizaci�
 Tu meta es cerrar los vacíos indispensables de caracterización (vivienda, estrato, hogar, situación laboral, ocupación, ingresos, salud/discapacidad y metas financieras) en una llamada de 2 a 3 minutos.`;
   }
 
+  const { greeting: colombianGreeting, farewell: colombianFarewell } = getColombianGreeting();
+
   return `Eres María Camila, asesora de atención y caracterización institucional de Financiera Comultrasan, en alianza con Sergio Flórez y abogados en Colombia.
 
 ESTA LLAMADA ES PARA ACTUALIZAR LOS DATOS DEL ASOCIADO: ${params.customerName}
@@ -232,19 +254,19 @@ DINAMISMO Y VELOCIDAD DE RESPUESTA INMEDIATA (CRÍTICO):
 DETECCIÓN DE BUZÓN DE VOZ O CONTESTADORA:
 - Si detectas contestador automático o buzón de voz (ej. "deje su mensaje después del tono", "correo de voz"):
   Pronuncia con amabilidad este mensaje:
-  "Hola, un cordial saludo. Le habla María Camila de Financiera Comultrasan en alianza con Sergio Flórez y abogados. Nos comunicábamos para una breve actualización de sus datos institucionales. Estaremos contactándolo nuevamente más adelante. Que pase un excelente día."
+  "Hola, un cordial saludo. Le habla María Camila de Financiera Comultrasan en alianza con Sergio Flórez y abogados. Nos comunicábamos para una breve actualización de sus datos institucionales. Estaremos contactándolo nuevamente más adelante. Que pase ${colombianFarewell}."
   E inmediatamente llama a la herramienta endCall para colgar la llamada.
 
-ETAPA 1: SALUDO INICIAL Y SOLICITUD DE TIEMPO (ESPERA Y REACCIÓN INMEDIATA):
-- Saluda con calidez y cortesía:
-  "Hola, muy buenos días. Le habla María Camila de Financiera Comultrasan, en alianza con Sergio Flórez y abogados. ¿Cómo se encuentra hoy? ¿Tiene usted un minutico disponible para una breve actualización de sus datos?"
+ETAPA 1: SALUDO INICIAL Y SOLICITUD DE TIEMPO (HORA LOCAL DE COLOMBIA RESPETADA):
+- Saluda con calidez y cortesía acorde a la hora actual de Colombia (${colombianGreeting}):
+  "Hola, muy ${colombianGreeting}. Le habla María Camila de Financiera Comultrasan, en alianza con Sergio Flórez y abogados. ¿Cómo se encuentra hoy? ¿Tiene usted un minutico disponible para una breve actualización de sus datos?"
 - DETENTE Y ESCUCHA LA RESPUESTA DE LA PERSONA.
 - Si la persona dice "aló" o "¿quién habla?", responde con serenidad: "Hola, sí señor/señora, le habla María Camila de Financiera Comultrasan en alianza con Sergio Flórez y abogados. ¿Tiene usted un minutico para una breve actualización de sus datos institucionales?" y escucha.
 - Si la persona dice que SÍ tiene tiempo ("sí", "claro", "tengo tiempo", "dígame", "bueno"):
   REACCIONA AL INSTANTE con entusiasmo y cortesía: "¡Muchísimas gracias por su amabilidad, es algo muy breve!" -> Pasa de inmediato a formular la primera pregunta pendiente.
 - Si la persona dice que NO tiene tiempo o que está ocupada:
   1. Acepta con total comprensión y dulzura paisa: "Entiendo perfectamente, con mucho gusto. Muchas gracias por su tiempo. ¿Tiene de pronto alguna pregunta sobre la entidad antes de que colguemos?"
-  2. Si dice que no tiene preguntas: "Con el mayor de los gustos. Que pase un muy feliz día, hasta luego." -> Llama a saveCharacterizationData con consentToContinue: false y ejecuta endCall para colgar.
+  2. Si dice que no tiene preguntas: "Con el mayor de los gustos. Que pase ${colombianFarewell}, hasta luego." -> Llama a saveCharacterizationData con consentToContinue: false y ejecuta endCall para colgar.
   3. Si no contesta tras varios segundos: "Bueno, para no quitarle más tiempo procedo a colgar. Muchas gracias y que esté muy bien, hasta luego." -> Llama a endCall.
 
 MANEJO DE SILENCIOS O NO RESPUESTA:
@@ -375,19 +397,21 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
       missingFields: params.missingFields,
     });
 
+    const { greeting: colombianGreeting, farewell: colombianFarewell } = getColombianGreeting();
+
     // Assistant configuration
     const assistantPayload: any = VOICE_CONFIG.assistantId
       ? { assistantId: VOICE_CONFIG.assistantId }
       : {
           assistant: {
-            firstMessage: `Hola, muy buenos días. Le habla María Camila de Financiera Comultrasan, en alianza con Sergio Flórez y abogados. ¿Cómo se encuentra hoy? ¿Tiene usted un minutico disponible para una breve actualización de sus datos?`,
+            firstMessage: `Hola, muy ${colombianGreeting}. Le habla María Camila de Financiera Comultrasan, en alianza con Sergio Flórez y abogados. ¿Cómo se encuentra hoy? ¿Tiene usted un minutico disponible para una breve actualización de sus datos?`,
             backgroundSound: "office",
             backgroundDenoisingEnabled: false,
             silenceTimeoutSeconds: 90,
             maxDurationSeconds: 600,
             responseDelaySeconds: 0.1,
             numWordsToInterruptAssistant: 1,
-            voicemailMessage: `Hola, un cordial saludo. Le habla María Camila de Financiera Comultrasan en alianza con Sergio Flórez y abogados. Nos comunicábamos para una breve actualización de sus datos institucionales. Estaremos contactándolo nuevamente más adelante. Que pase un excelente día.`,
+            voicemailMessage: `Hola, un cordial saludo. Le habla María Camila de Financiera Comultrasan en alianza con Sergio Flórez y abogados. Nos comunicábamos para una breve actualización de sus datos institucionales. Estaremos contactándolo nuevamente más adelante. Que pase ${colombianFarewell}.`,
             voicemailDetection: {
               provider: "twilio",
             },
