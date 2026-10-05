@@ -147,7 +147,7 @@ export function ClientsCarousel({
   return (
     <div className={cn("w-full bg-white", className)}>
       <div className="text-center">
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-none">
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-none">
           <Building2 className="h-3.5 w-3.5 text-indigo-500" />
           <span>Ecosistema Financiero y Cooperativo</span>
         </div>
