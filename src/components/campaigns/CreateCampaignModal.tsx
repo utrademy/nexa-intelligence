@@ -25,19 +25,24 @@ const STEPS = ["Objetivo", "Segmentación", "Canal", "Revisión"];
 
 const OBJECTIVE_OPTIONS = [
   {
+    id: "integral_100",
+    title: "Caracterización integral 100% (Perfil total)",
+    desc: "Cerrar exhaustivamente las 7 dimensiones del perfil (34 campos: laboral, hogar, educación, finanzas, social e inclusión) hasta alcanzar el 100% de completitud institucional.",
+  },
+  {
     id: "completar_caracterizacion",
-    title: "Completar caracterización",
+    title: "Completar caracterización (Vacíos críticos ~70%)",
     desc: "Cerrar vacíos críticos en perfiles incompletos recopilando información laboral, del hogar y socioeconómica.",
   },
   {
     id: "actualizar_informacion",
-    title: "Actualizar información",
-    desc: "Renovar datos de contacto, ocupación y rango de ingresos para asociados antiguos.",
+    title: "Actualizar información (~60%)",
+    desc: "Renovar datos de contacto, ocupación, antigüedad y rango de ingresos para asociados antiguos.",
   },
   {
     id: "encuesta_validacion",
-    title: "Encuesta / validación",
-    desc: "Validar datos clave y recolectar consentimiento de tratamiento de datos Ley 1581.",
+    title: "Encuesta / validación (Ley 1581)",
+    desc: "Validar datos clave y recolectar consentimiento formal de tratamiento de datos Ley 1581.",
   },
 ];
 
@@ -132,9 +137,9 @@ export function CreateCampaignModal({
 }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("Campaña de Caracterización Prioritaria con IA");
-  const [objectiveType, setObjectiveType] = useState("completar_caracterizacion");
+  const [objectiveType, setObjectiveType] = useState("integral_100");
   const [objectiveDesc, setObjectiveDesc] = useState(
-    "Cerrar brechas de caracterización socioeconómica y laboral en asociados con vacíos críticos.",
+    "Cerrar exhaustivamente las 7 dimensiones del perfil (34 campos: laboral, hogar, educación, finanzas, social e inclusión) hasta alcanzar el 100% de completitud institucional.",
   );
 
   // Filters (Real Supabase query)

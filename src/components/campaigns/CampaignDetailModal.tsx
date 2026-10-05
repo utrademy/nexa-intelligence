@@ -219,6 +219,15 @@ export function CampaignDetailModal({
           destinationPhone: cleanPhone,
           customerName: selectedPerson.fullName,
           campaignId: campaign.id,
+          campaignObjective: campaign.objective
+            ? campaign.objective.toLowerCase().includes("integral") || campaign.name.toLowerCase().includes("integral")
+              ? "integral_100"
+              : campaign.objective.toLowerCase().includes("actualiz")
+                ? "actualizar_informacion"
+                : campaign.objective.toLowerCase().includes("validac") || campaign.objective.toLowerCase().includes("ley 1581")
+                  ? "encuesta_validacion"
+                  : "completar_caracterizacion"
+            : "integral_100",
         }),
       });
 

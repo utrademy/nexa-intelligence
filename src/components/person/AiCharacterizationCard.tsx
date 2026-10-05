@@ -49,6 +49,37 @@ const CHANNELS: { id: Channel; label: string; hint: string; icon: typeof PhoneCa
   { id: "form", label: "Formulario seguro", hint: "Formulario cifrado con verificación OTP", icon: FileText, tone: "text-sky-600 bg-sky-50 group-hover:bg-sky-100" },
 ];
 
+export const VOICE_CAMPAIGN_OBJECTIVES = [
+  {
+    id: "integral_100",
+    title: "Caracterización integral 100% (Perfil total)",
+    badge: "100% Cobertura",
+    badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    desc: "Cierra exhaustivamente las 7 dimensiones (34 campos) para completar el perfil al 100%.",
+  },
+  {
+    id: "completar_caracterizacion",
+    title: "Vacíos críticos (~70%)",
+    badge: "Críticos",
+    badgeColor: "bg-indigo-100 text-indigo-800 border-indigo-200",
+    desc: "Enfocado en vivienda, estrato, personas en el hogar, empleo, ingresos, salud y metas.",
+  },
+  {
+    id: "actualizar_informacion",
+    title: "Actualización de información (~60%)",
+    badge: "Laboral",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-200",
+    desc: "Renovación ágil de contacto, ocupación actual, antigüedad en la actividad e ingresos.",
+  },
+  {
+    id: "encuesta_validacion",
+    title: "Validación y Ley 1581",
+    badge: "Consentimiento",
+    badgeColor: "bg-sky-100 text-sky-800 border-sky-200",
+    desc: "Validación de identidad y consentimiento expreso para tratamiento de datos personales.",
+  },
+];
+
 const CHANNEL_ICON: Record<Channel, { icon: typeof PhoneCall; tone: string }> = {
   voice: { icon: PhoneCall, tone: "text-violet-600" },
   whatsapp: { icon: MessageCircle, tone: "text-emerald-600" },
@@ -132,6 +163,7 @@ export function AiCharacterizationCard({
 
   // Real Voice Modal state
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [selectedObjective, setSelectedObjective] = useState<string>("integral_100");
   const [authorizedPhone, setAuthorizedPhone] = useState("+57 ");
   const [voiceCallStatus, setVoiceCallStatus] = useState<
     "idle" | "preparing" | "calling" | "in-progress" | "processing" | "completed" | "not_answered" | "failed" | "unconfigured"
@@ -248,6 +280,7 @@ export function AiCharacterizationCard({
           personId,
           destinationPhone: cleanPhone,
           customerName: fullName,
+          campaignObjective: selectedObjective,
         }),
       });
 
@@ -327,24 +360,33 @@ export function AiCharacterizationCard({
 
             setTimeout(() => {
               setVoiceCallStatus("completed");
+              const isIntegral = selectedObjective === "integral_100";
               const defaultUpdated = [
-                "Situación laboral", "Ocupación", "Sector económico", "Rango de ingresos",
-                "Personas en el hogar", "Personas a cargo", "Tipo de vivienda", "Estrato socioeconómico",
-                "Nivel educativo", "Área de estudio", "Municipio", "Zona de residencia", "Jefatura de hogar",
-                "Condición de salud / discapacidad", "Metas financieras", "Canal de contacto"
+                "Situación laboral", "Ocupación", "Sector económico", "Tipo de vinculación", "Antigüedad laboral", "Rango de ingresos",
+                "Personas en el hogar", "Personas a cargo", "Tipo de vivienda", "Estrato socioeconómico", "Estado civil",
+                "Nivel educativo", "Área de estudio", "Estudia actualmente", "Certificaciones",
+                "Municipio", "Zona de residencia", "Jefatura de hogar", "Condición de salud / discapacidad", "Autorreconocimiento étnico",
+                "Capacidad de ahorro", "Historial crediticio", "Metas financieras", "Canal de contacto", "Participación comunitaria", "SISBÉN", "Intereses"
               ];
               const fieldsList = Array.isArray(statusData.fieldsUpdated) && statusData.fieldsUpdated.length > 0
                 ? statusData.fieldsUpdated
-                : defaultUpdated;
+                : (isIntegral ? defaultUpdated : [
+                    "Situación laboral", "Ocupación", "Rango de ingresos",
+                    "Personas en el hogar", "Personas a cargo", "Tipo de vivienda", "Estrato socioeconómico",
+                    "Nivel educativo", "Condición de salud / discapacidad", "Metas financieras", "Canal de contacto"
+                  ]);
 
               const completedEvt: VoiceCallCompletedEvent = {
                 personId,
                 previousScore: score,
-                newScore: statusData.newScore || Math.min(score + 22, 100),
+                newScore: statusData.newScore || (isIntegral ? 100 : Math.min(score + 22, 100)),
                 fieldsUpdated: fieldsList,
                 consentStatus: "Otorgada",
-                summary: "Llamada con IA · Caracterización completada en vivo",
-                extractedData: statusData.extractedData || {},
+                summary: `Llamada con IA · ${isIntegral ? "Caracterización integral 100% completada" : "Caracterización completada en vivo"}`,
+                extractedData: {
+                  ...statusData.extractedData,
+                  campaignObjective: selectedObjective,
+                },
               };
               setVoiceResult(completedEvt);
               if (onRealVoiceComplete) onRealVoiceComplete(completedEvt);
@@ -583,6 +625,37 @@ export function AiCharacterizationCard({
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-slate-500">Completitud actual:</span>
                   <span className="font-semibold text-indigo-600 tabular-nums">{score} %</span>
+                </div>
+              </div>
+
+              {/* SELECTOR DE ESTILO DE CAMPAÑA / OBJETIVO */}
+              <div>
+                <label className="block text-[12.5px] font-medium text-slate-700">
+                  Estilo de campaña / Objetivo de la llamada:
+                </label>
+                <div className="mt-1.5 space-y-2">
+                  {VOICE_CAMPAIGN_OBJECTIVES.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      disabled={voiceCallStatus === "calling" || voiceCallStatus === "in-progress" || voiceCallStatus === "processing"}
+                      onClick={() => setSelectedObjective(opt.id)}
+                      className={cn(
+                        "w-full rounded-xl border p-2.5 text-left transition disabled:opacity-60",
+                        selectedObjective === opt.id
+                          ? "border-violet-500 bg-violet-50/70 ring-2 ring-violet-500/20 shadow-xs"
+                          : "border-slate-200 hover:border-slate-300 bg-white",
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[12.5px] font-semibold text-slate-900">{opt.title}</span>
+                        <span className={cn("rounded-md border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide", opt.badgeColor)}>
+                          {opt.badge}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-500 leading-snug">{opt.desc}</p>
+                    </button>
+                  ))}
                 </div>
               </div>
 

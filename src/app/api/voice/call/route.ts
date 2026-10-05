@@ -5,7 +5,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { personId, destinationPhone, customerName, campaignId } = body;
+    const { personId, destinationPhone, customerName, campaignId, campaignObjective = "integral_100" } = body;
 
     if (!personId || !destinationPhone) {
       return NextResponse.json(
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     const knownSummary: string[] = [];
     const missingFields: string[] = [];
 
-    // 1. Ubicación y vivienda
+    // 1. Personal y Ubicación
     if (person.city) {
       knownSummary.push(`Ciudad o municipio de residencia: ${person.city}`);
     } else if (attrMap.has("municipality")) {
@@ -60,20 +60,26 @@ export async function POST(request: Request) {
       missingFields.push("Municipio o ciudad de residencia");
     }
 
+    // 2. Hogar
+    if (attrMap.has("marital")) {
+      knownSummary.push(`Estado civil: ${attrMap.get("marital")}`);
+    } else if (campaignObjective === "integral_100") {
+      missingFields.push("Estado civil actual");
+    }
+
     if (attrMap.has("housing") || attrMap.has("stratum")) {
       knownSummary.push(`Vivienda: ${attrMap.get("housing") || "Propia/Arriendo"} (Estrato ${attrMap.get("stratum") || ""})`.trim());
     } else {
       missingFields.push("Tipo de vivienda (propia o arriendo) y estrato socioeconómico");
     }
 
-    // 2. Conformación del hogar
     if (attrMap.has("householdSize") || attrMap.has("dependents")) {
       knownSummary.push(`Hogar: ${attrMap.get("householdSize") || "N/D"} personas (${attrMap.get("dependents") || "0"} a cargo)`);
     } else {
       missingFields.push("Conformación del hogar (número de personas y personas a cargo económicamente)");
     }
 
-    // 3. Situación laboral y ocupación
+    // 3. Laboral
     const empStatus = person.employment_status || attrMap.get("employmentStatus");
     const occup = person.occupation || attrMap.get("occupation");
     if (empStatus && empStatus !== "Sin información") {
@@ -88,6 +94,24 @@ export async function POST(request: Request) {
       missingFields.push("Ocupación, oficio o actividad principal");
     }
 
+    if (attrMap.has("sector") || attrMap.has("contract")) {
+      knownSummary.push(`Sector y tipo de contrato: ${attrMap.get("sector") || "N/D"} (${attrMap.get("contract") || ""})`.trim());
+    } else if (campaignObjective === "integral_100") {
+      missingFields.push("Sector económico y tipo de vinculación laboral o contrato");
+    }
+
+    if (attrMap.has("tenure")) {
+      knownSummary.push(`Antigüedad en la actividad: ${attrMap.get("tenure")}`);
+    } else if (campaignObjective === "integral_100" || campaignObjective === "actualizar_informacion") {
+      missingFields.push("Antigüedad en su ocupación o empleo actual");
+    }
+
+    if (attrMap.has("income")) {
+      knownSummary.push(`Rango de ingresos: ${attrMap.get("income")}`);
+    } else {
+      missingFields.push("Rango aproximado de ingresos mensuales");
+    }
+
     // 4. Educación
     const edu = person.education_level || attrMap.get("educationLevel");
     if (edu && edu !== "Sin información") {
@@ -96,24 +120,61 @@ export async function POST(request: Request) {
       missingFields.push("Nivel educativo más alto alcanzado y área de estudio");
     }
 
-    // 5. Inclusión y salud / discapacidad
+    if (attrMap.has("studying") || attrMap.has("certifications")) {
+      knownSummary.push(`Estudios actuales / certificaciones: ${attrMap.get("studying") || "N/D"} (${attrMap.get("certifications") || ""})`.trim());
+    } else if (campaignObjective === "integral_100") {
+      missingFields.push("Si se encuentra estudiando actualmente y certificaciones obtenidas");
+    }
+
+    // 5. Financiero
+    if (attrMap.has("savings")) {
+      knownSummary.push(`Capacidad de ahorro: ${attrMap.get("savings")}`);
+    } else if (campaignObjective === "integral_100") {
+      missingFields.push("Capacidad o hábito de ahorro mensual estimado");
+    }
+
+    if (attrMap.has("creditHistory")) {
+      knownSummary.push(`Historial crediticio: ${attrMap.get("creditHistory")}`);
+    } else if (campaignObjective === "integral_100") {
+      missingFields.push("Historial o experiencia crediticia previa");
+    }
+
+    if (attrMap.has("goals")) {
+      knownSummary.push(`Metas financieras: ${attrMap.get("goals")}`);
+    } else {
+      missingFields.push("Metas de ahorro o financieras para este año");
+    }
+
+    // 6. Social
+    if (attrMap.has("community") || attrMap.has("sisben") || attrMap.has("interests")) {
+      knownSummary.push(`Social: ${attrMap.get("community") || "N/D"}, SISBÉN: ${attrMap.get("sisben") || "N/D"}`);
+    } else if (campaignObjective === "integral_100") {
+      missingFields.push("Participación comunitaria, grupo SISBÉN e intereses personales");
+    }
+
+    if (attrMap.has("preferredChannel")) {
+      knownSummary.push(`Canal de contacto preferido: ${attrMap.get("preferredChannel")}`);
+    } else {
+      missingFields.push("Canal de contacto preferido (llamada, WhatsApp, etc.)");
+    }
+
+    // 7. Inclusión
     if (attrMap.has("disability")) {
       knownSummary.push(`Condición de salud / discapacidad: ${attrMap.get("disability")}`);
     } else {
       missingFields.push("Condición de salud o discapacidad física/médica permanente");
     }
 
-    // 6. Ingresos y metas financieras
-    if (attrMap.has("income")) {
-      knownSummary.push(`Rango de ingresos: ${attrMap.get("income")}`);
-    } else {
-      missingFields.push("Rango aproximado de ingresos mensuales");
+    if (attrMap.has("ethnic")) {
+      knownSummary.push(`Autorreconocimiento étnico: ${attrMap.get("ethnic")}`);
+    } else if (campaignObjective === "integral_100") {
+      missingFields.push("Autorreconocimiento étnico");
     }
 
-    if (attrMap.has("goals") || attrMap.has("savings")) {
-      knownSummary.push(`Metas financieras: ${attrMap.get("goals") || attrMap.get("savings")}`);
-    } else {
-      missingFields.push("Metas de ahorro o financieras para este año");
+    if (attrMap.has("headOfHousehold")) {
+      knownSummary.push(`Jefatura de hogar: ${attrMap.get("headOfHousehold")}`);
+    } else if (campaignObjective === "integral_100") {
+      missingFields.push("Jefatura de hogar (si es cabeza de familia)");
     }
 
     // Check if voice API key is ready
@@ -138,6 +199,7 @@ export async function POST(request: Request) {
       destinationPhone: cleanPhone,
       customerName: fullName,
       campaignId: campaignId || undefined,
+      campaignObjective,
       knownSummary,
       missingFields,
     });
@@ -150,12 +212,13 @@ export async function POST(request: Request) {
       channel: "VOICE",
       direction: "OUTBOUND",
       status: "IN_PROGRESS",
-      summary: `Llamada con IA iniciada al número autorizado (${cleanPhone.slice(0, 4)}***${cleanPhone.slice(-2)}).`,
+      summary: `Llamada con IA (${campaignObjective}) iniciada al número autorizado (${cleanPhone.slice(0, 4)}***${cleanPhone.slice(-2)}).`,
       structured_data: {
         provider_call_id: result.callId,
         provider: result.provider,
         status: result.status,
         campaign_id: campaignId || null,
+        campaign_objective: campaignObjective,
         started_at: new Date().toISOString(),
       },
       ai_generated: true,

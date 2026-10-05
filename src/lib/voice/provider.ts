@@ -1,29 +1,40 @@
 export interface NormalizedCallResult {
   personId: string;
   consentToContinue: boolean;
+  campaignObjective?: string;
+  // Hogar
+  marital?: string;
+  householdSize?: number | string;
+  dependents?: number | string;
+  housing?: string;
+  stratum?: number | string;
   // Laboral
   employmentStatus?: string;
   occupation?: string;
   sector?: string;
   contract?: string;
+  tenure?: string;
   income?: string;
-  // Hogar
-  householdSize?: number | string;
-  dependents?: number | string;
-  housing?: string;
-  stratum?: number | string;
   // Educación
   educationLevel?: string;
   studyField?: string;
+  studying?: string;
+  certifications?: string;
+  // Financiero
+  savings?: string;
+  creditHistory?: string;
+  goals?: string;
+  // Social
+  community?: string;
+  sisben?: string;
+  interests?: string;
+  preferredChannel?: string;
   // Inclusión / Ubicación
   municipality?: string;
   residence?: string;
   headOfHousehold?: string;
   disability?: string;
-  // Financiero / Social
-  savings?: string;
-  goals?: string;
-  preferredChannel?: string;
+  ethnic?: string;
   additionalField?: string;
   source: "AI_VOICE";
   providerCallId: string;
@@ -39,6 +50,7 @@ export interface VoiceCallInitiateParams {
   destinationPhone: string;
   customerName: string;
   campaignId?: string;
+  campaignObjective?: string;
   knownSummary?: string[];
   missingFields?: string[];
 }
@@ -117,6 +129,7 @@ export interface StartCallParams {
   destinationPhone: string;
   customerName: string;
   campaignId?: string;
+  campaignObjective?: string;
   knownSummary?: string[];
   missingFields?: string[];
 }
@@ -126,13 +139,16 @@ export interface StartCallParams {
  * Instructs the voice AI to introduce the call warmly on behalf of Financiera Comultrasan
  * (empresa afiliada a Sergio Flores y abogados), speak with a warm, natural and agile Colombian Paisa accent,
  * respond immediately without artificial pauses, understand disability cleanly ("no tengo" vs "no quiero"),
- * and focus questions on missing fields.
+ * and focus questions on missing fields according to the selected campaign objective style.
  */
 export function buildCharacterizationPrompt(params: {
   customerName: string;
+  campaignObjective?: string;
   knownSummary?: string[];
   missingFields?: string[];
 }): string {
+  const objective = params.campaignObjective || "integral_100";
+
   const knownText =
     params.knownSummary && params.knownSummary.length > 0
       ? params.knownSummary.map((k) => `- ${k}`).join("\n")
@@ -141,11 +157,58 @@ export function buildCharacterizationPrompt(params: {
   const missingText =
     params.missingFields && params.missingFields.length > 0
       ? params.missingFields.map((m) => `- ${m}`).join("\n")
-      : "Todos los campos de caracterización (vivienda, hogar, laboral, educación, salud/discapacidad, ingresos/metas).";
+      : "Campos de caracterización faltantes en la base de datos.";
+
+  let objectiveInstructions = "";
+  if (objective === "integral_100") {
+    objectiveInstructions = `OBJETIVO ESTRATÉGICO: CARACTERIZACIÓN INTEGRAL 100% (PERFIL TOTAL)
+Tu meta en esta llamada es recopilar la totalidad de los datos faltantes en las 7 dimensiones institucionales (Hogar, Laboral, Educación, Financiero, Social e Inclusión) para llevar el perfil del asociado al 100% de completitud.
+Para que la llamada sea ágil, dinámica y humana (máximo 3 a 4 minutos), NO preguntes campo por campo de forma monótona; formula preguntas conversacionales agrupadas de forma natural:
+
+1. Bloque Hogar (si faltan datos):
+   "Para comenzar con su información de hogar, ¿cuál es su estado civil actual, su vivienda es propia o en arriendo y estrato, y cuántas personas viven con usted incluyéndose?"
+   (Extrae: marital, housing, stratum, householdSize, dependents).
+
+2. Bloque Laboral (si faltan datos):
+   "En la parte laboral, ¿cuál es su ocupación o actividad principal, qué tipo de contrato o vinculación tiene, cuánto tiempo lleva en ella y en qué rango aproximado están sus ingresos mensuales?"
+   (Extrae: employmentStatus, occupation, sector, contract, tenure, income).
+
+3. Bloque Educación (si faltan datos):
+   "En educación, ¿cuál ha sido su máximo nivel educativo y profesión o área de estudio, se encuentra estudiando actualmente o cuenta con cursos o certificaciones?"
+   (Extrae: educationLevel, studyField, studying, certifications).
+
+4. Bloque Financiero (si faltan datos):
+   "En la parte financiera, ¿cuenta con capacidad o hábito de ahorro mensual, cómo calificaría su historial crediticio y cuáles son sus principales metas financieras o proyectos para este año?"
+   (Extrae: savings, creditHistory, goals).
+
+5. Bloque Social e Intereses (si faltan datos):
+   "Para acercarle nuestros programas de bienestar, ¿participa en alguna junta comunitaria, cooperativa o asociación, cuenta con clasificación SISBÉN, y qué temas le interesan más: vivienda, educación, negocio o ahorro?"
+   (Extrae: community, sisben, interests).
+
+6. Bloque Salud / Inclusión y Residencia (si faltan datos) - ¡REGLA ESTRICTA DE COMPRENSIÓN!:
+   "De manera voluntaria, ¿cuenta usted actualmente con alguna condición de discapacidad médica permanente o no tiene ninguna?, ¿se reconoce en algún grupo étnico, y es usted quien encabeza la jefatura del hogar?"
+   (Extrae: disability, ethnic, headOfHousehold, residence).
+
+7. Canal preferido de contacto:
+   "Y para mantenerlo informado de beneficios y convenios, ¿cuál es su canal de contacto preferido: llamada, WhatsApp, mensaje de texto o correo?"
+   (Extrae: preferredChannel).`;
+  } else if (objective === "actualizar_informacion") {
+    objectiveInstructions = `OBJETIVO ESTRATÉGICO: ACTUALIZACIÓN RÁPIDA DE INFORMACIÓN (~60%)
+Tu meta es renovar y confirmar con el asociado sus datos de contacto (ciudad/municipio), situación laboral actual, ocupación, antigüedad en la actividad y rango de ingresos mensuales.
+Formula 2 intervenciones ágiles enfocadas en estos datos laborales y de contacto.`;
+  } else if (objective === "encuesta_validacion") {
+    objectiveInstructions = `OBJETIVO ESTRATÉGICO: ENCUESTA Y VALIDACIÓN LEY 1581
+Tu meta es validar la identidad del asociado, obtener formalmente su autorización expresa para el tratamiento de datos personales conforme a la Ley 1581 de 2012, y verificar su ocupación principal y canal preferido de contacto.`;
+  } else {
+    objectiveInstructions = `OBJETIVO ESTRATÉGICO: COMPLETAR VACÍOS CRÍTICOS (~70%)
+Tu meta es cerrar los vacíos indispensables de caracterización (vivienda, estrato, hogar, situación laboral, ocupación, ingresos, salud/discapacidad y metas financieras) en una llamada de 2 a 3 minutos.`;
+  }
 
   return `Eres María Camila, asesora de atención y caracterización institucional de Financiera Comultrasan, en alianza con Sergio Flórez y abogados en Colombia.
 
 ESTA LLAMADA ES PARA ACTUALIZAR LOS DATOS DEL ASOCIADO: ${params.customerName}
+
+${objectiveInstructions}
 
 DATOS YA CONOCIDOS Y CONFIRMADOS EN NUESTRA BASE DE DATOS:
 ${knownText}
@@ -191,25 +254,7 @@ MANEJO DE USUARIOS REACIOS O MOLESTOS:
   Permanece serena, cordial y empática: "Tiene toda la razón, le ofrezco una disculpa por la interrupción. Con mucho gusto no le quitamos más tiempo. Que pase un buen día."
   Guarda saveCharacterizationData con consentToContinue: false y llama a endCall.
 
-ETAPA 2: PREGUNTAS DE CARACTERIZACIÓN (FORMULA UNA SOLA PREGUNTA A LA VEZ, ENFOCADA EN CAMPOS PENDIENTES):
-Formula una sola pregunta a la vez y responde de inmediato con dinamismo:
-
-1. Ubicación y vivienda (si está pendiente):
-"¿En qué municipio o ciudad reside actualmente, y su vivienda es propia o en arriendo?"
-
-2. Conformación del hogar (si está pendiente):
-"¿Cuántas personas conforman su hogar incluyéndose usted, y cuántas de ellas dependen económicamente de usted?"
-
-3. Ocupación y actividad laboral (si está pendiente):
-"¿Cuál es actualmente su situación laboral y a qué ocupación u oficio principal se dedica?"
-
-4. Nivel educativo (si está pendiente):
-"¿Cuál ha sido su nivel educativo más alto alcanzado y en qué área de estudio o disciplina?"
-
-5. Salud e inclusión (si está pendiente) - ¡REGLA ESTRICTA DE COMPRENSIÓN!:
-Pregunta: "Para orientar programas de bienestar e inclusión de la entidad, de manera voluntaria, ¿cuenta usted actualmente con alguna condición de discapacidad o incapacidad médica permanente, o no tiene ninguna?"
-
-REGLA VITAL DE COMPRENSIÓN PARA LA RESPUESTA DE SALUD:
+REGLA VITAL DE COMPRENSIÓN PARA LA RESPUESTA DE SALUD / DISCAPACIDAD:
 a) SI EL USUARIO DICE QUE NO TIENE DISCAPACIDAD (ej. "no tengo", "no", "ninguna", "no tengo ninguna", "no cuento con ninguna", "estoy bien de salud", "gracias a Dios ninguna"):
    - RESPONDE DE INMEDIATO CON CALIDEZ Y ALEGRÍA: "¡Perfecto, excelente! Me alegra muchísimo saberlo. Gracias por su respuesta."
    - Guarda en saveCharacterizationData: disability: "No reporta discapacidad / Ninguna"
@@ -220,9 +265,6 @@ b) ÚNICAMENTE SI EL USUARIO DICE EXPLÍCITAMENTE QUE NO DESEA RESPONDER (ej. "n
 c) SI EL USUARIO TIENE UNA CONDICIÓN ESPECÍFICA (ej. "discapacidad física", "discapacidad visual", "problemas de movilidad"):
    - Di con empatía: "Muchas gracias por compartirlo para tenerlo muy presente en nuestros programas de bienestar."
    - Guarda en saveCharacterizationData la condición informada.
-
-6. Ingresos y metas financieras (si está pendiente):
-"Y para brindarle mejores convenios y beneficios, ¿en qué rango aproximado se encuentran sus ingresos mensuales y tiene alguna meta financiera o de ahorro para este año?"
 
 GESTIÓN DE PREGUNTAS DEL USUARIO (GUARDRAIL ESTRICTO):
 - Si pregunta sobre Financiera Comultrasan o Sergio Flórez y abogados:
@@ -324,6 +366,7 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
     // Dynamic prompt tailored to the person's missing fields and known data
     const systemPrompt = buildCharacterizationPrompt({
       customerName: params.customerName,
+      campaignObjective: params.campaignObjective,
       knownSummary: params.knownSummary,
       missingFields: params.missingFields,
     });
@@ -376,6 +419,16 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
                       type: "object",
                       properties: {
                         consentToContinue: { type: "boolean", description: "¿Autorizó continuar con la llamada?" },
+                        // Hogar
+                        marital: {
+                          type: "string",
+                          enum: ["Soltero(a)", "Casado(a)", "Unión libre", "Separado(a)", "Viudo(a)"],
+                          description: "Estado civil",
+                        },
+                        householdSize: { type: "number", description: "Cantidad de personas en el hogar incluyéndose" },
+                        dependents: { type: "number", description: "Número de personas a cargo económicamente" },
+                        housing: { type: "string", description: "Tipo de vivienda (Propia, Arriendo, Familiar)" },
+                        stratum: { type: "string", description: "Estrato socioeconómico (1 a 6)" },
                         // Laboral
                         employmentStatus: {
                           type: "string",
@@ -385,12 +438,8 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
                         occupation: { type: "string", description: "Ocupación, oficio o profesión principal" },
                         sector: { type: "string", description: "Sector económico de su actividad" },
                         contract: { type: "string", description: "Tipo de contrato o vinculación laboral" },
+                        tenure: { type: "string", description: "Antigüedad en su empleo o actividad actual (ej. '2 años', '5 años', 'Menos de 1 año')" },
                         income: { type: "string", description: "Rango de ingresos mensuales aproximado" },
-                        // Hogar
-                        householdSize: { type: "number", description: "Cantidad de personas en el hogar incluyéndose" },
-                        dependents: { type: "number", description: "Número de personas a cargo económicamente" },
-                        housing: { type: "string", description: "Tipo de vivienda (Propia, Arriendo, Familiar)" },
-                        stratum: { type: "string", description: "Estrato socioeconómico (1 a 6)" },
                         // Educación
                         educationLevel: {
                           type: "string",
@@ -398,19 +447,31 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
                           description: "Nivel educativo más alto",
                         },
                         studyField: { type: "string", description: "Área de estudio, profesión o disciplina" },
+                        studying: { type: "string", enum: ["Sí", "No"], description: "¿Se encuentra estudiando actualmente?" },
+                        certifications: { type: "string", description: "Cursos, diplomados o certificaciones obtenidas, o 'Ninguna'" },
+                        // Financiero
+                        savings: { type: "string", description: "Capacidad o hábito de ahorro mensual estimado" },
+                        creditHistory: {
+                          type: "string",
+                          enum: ["Excelente", "Bueno", "Regular", "Sin experiencia crediticia"],
+                          description: "Historial o experiencia crediticia previa",
+                        },
+                        goals: { type: "string", description: "Metas financieras principales (vivienda, educación, negocio, etc.)" },
+                        // Social
+                        community: { type: "string", description: "Participación en grupos comunitarios, cooperativos o 'Ninguna'" },
+                        sisben: { type: "string", description: "Clasificación o grupo SISBÉN (ej. 'Grupo A', 'Grupo B', 'No aplica')" },
+                        interests: { type: "string", description: "Intereses personales o de bienestar (ej. 'Vivienda', 'Educación', 'Microempresa', 'Ahorro')" },
+                        preferredChannel: { type: "string", description: "Canal preferido de contacto" },
                         // Inclusión y salud / discapacidad
                         disability: {
                           type: "string",
-                          description: "Condición de discapacidad o incapacidad laboral permanente (ej. 'No reporta discapacidad / Ninguna', 'Discapacidad física', 'Discapacidad visual', 'Discapacidad auditiva', etc.)",
+                          description: "Condición de discapacidad o incapacidad laboral permanente (ej. 'No reporta discapacidad / Ninguna', 'Discapacidad física', etc.)",
                         },
+                        ethnic: { type: "string", description: "Autorreconocimiento étnico (ej. 'Mestizo', 'Afrocolombiano', 'Indígena', 'Ninguno')" },
                         headOfHousehold: { type: "string", description: "Jefatura de hogar (Sí / No)" },
                         // Ubicación
                         municipality: { type: "string", description: "Municipio o ciudad de residencia" },
                         residence: { type: "string", description: "Zona de residencia (Urbana o Rural)" },
-                        // Financiero / Social
-                        savings: { type: "string", description: "Capacidad de ahorro mensual estimada" },
-                        goals: { type: "string", description: "Metas financieras principales (vivienda, educación, negocio, etc.)" },
-                        preferredChannel: { type: "string", description: "Canal preferido de contacto" },
                       },
                       required: ["consentToContinue"],
                     },
@@ -455,23 +516,33 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
                   type: "object",
                   properties: {
                     consentToContinue: { type: "boolean" },
-                    employmentStatus: { type: "string" },
-                    occupation: { type: "string" },
-                    sector: { type: "string" },
-                    contract: { type: "string" },
-                    income: { type: "string" },
+                    marital: { type: "string" },
                     householdSize: { type: "number" },
                     dependents: { type: "number" },
                     housing: { type: "string" },
                     stratum: { type: "string" },
+                    employmentStatus: { type: "string" },
+                    occupation: { type: "string" },
+                    sector: { type: "string" },
+                    contract: { type: "string" },
+                    tenure: { type: "string" },
+                    income: { type: "string" },
                     educationLevel: { type: "string" },
                     studyField: { type: "string" },
+                    studying: { type: "string" },
+                    certifications: { type: "string" },
+                    savings: { type: "string" },
+                    creditHistory: { type: "string" },
+                    goals: { type: "string" },
+                    community: { type: "string" },
+                    sisben: { type: "string" },
+                    interests: { type: "string" },
+                    preferredChannel: { type: "string" },
+                    disability: { type: "string" },
+                    ethnic: { type: "string" },
+                    headOfHousehold: { type: "string" },
                     municipality: { type: "string" },
                     residence: { type: "string" },
-                    headOfHousehold: { type: "string" },
-                    savings: { type: "string" },
-                    goals: { type: "string" },
-                    preferredChannel: { type: "string" },
                   },
                 },
               },
@@ -482,6 +553,7 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
               personId: params.personId,
               customerName: params.customerName,
               campaignId: params.campaignId,
+              campaignObjective: params.campaignObjective,
               source: "AI_VOICE",
             },
           },
@@ -498,6 +570,7 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
         personId: params.personId,
         destinationPhone: params.destinationPhone,
         campaignId: params.campaignId,
+        campaignObjective: params.campaignObjective,
       },
     };
 
@@ -795,29 +868,40 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
     return {
       personId,
       consentToContinue,
+      campaignObjective: metadata.campaignObjective || combined.campaignObjective || undefined,
+      // Hogar
+      marital: combined.marital ? String(combined.marital) : undefined,
+      householdSize: combined.householdSize !== undefined ? combined.householdSize : undefined,
+      dependents: combined.dependents !== undefined ? combined.dependents : undefined,
+      housing: combined.housing ? String(combined.housing) : undefined,
+      stratum: combined.stratum !== undefined ? combined.stratum : undefined,
       // Laboral
       employmentStatus: combined.employmentStatus ? String(combined.employmentStatus) : undefined,
       occupation: combined.occupation ? String(combined.occupation) : undefined,
       sector: combined.sector ? String(combined.sector) : undefined,
       contract: combined.contract ? String(combined.contract) : undefined,
+      tenure: combined.tenure ? String(combined.tenure) : undefined,
       income: combined.income ? String(combined.income) : undefined,
-      // Hogar
-      householdSize: combined.householdSize !== undefined ? combined.householdSize : undefined,
-      dependents: combined.dependents !== undefined ? combined.dependents : undefined,
-      housing: combined.housing ? String(combined.housing) : undefined,
-      stratum: combined.stratum !== undefined ? combined.stratum : undefined,
       // Educación
       educationLevel: combined.educationLevel ? String(combined.educationLevel) : undefined,
       studyField: combined.studyField ? String(combined.studyField) : undefined,
+      studying: combined.studying ? String(combined.studying) : undefined,
+      certifications: combined.certifications ? String(combined.certifications) : undefined,
+      // Financiero
+      savings: combined.savings ? String(combined.savings) : undefined,
+      creditHistory: combined.creditHistory ? String(combined.creditHistory) : undefined,
+      goals: combined.goals ? String(combined.goals) : undefined,
+      // Social
+      community: combined.community ? String(combined.community) : undefined,
+      sisben: combined.sisben ? String(combined.sisben) : undefined,
+      interests: combined.interests ? String(combined.interests) : undefined,
+      preferredChannel: combined.preferredChannel ? String(combined.preferredChannel) : "Llamada con IA",
       // Inclusión y ubicación
       municipality: combined.municipality || combined.city ? String(combined.municipality || combined.city) : undefined,
       residence: combined.residence ? String(combined.residence) : undefined,
       headOfHousehold: combined.headOfHousehold ? String(combined.headOfHousehold) : undefined,
       disability: combined.disability ? String(combined.disability) : undefined,
-      // Financiero y social
-      savings: combined.savings ? String(combined.savings) : undefined,
-      goals: combined.goals ? String(combined.goals) : undefined,
-      preferredChannel: combined.preferredChannel ? String(combined.preferredChannel) : "Llamada con IA",
+      ethnic: combined.ethnic ? String(combined.ethnic) : undefined,
       additionalField: combined.additionalField ? String(combined.additionalField) : undefined,
       source: "AI_VOICE",
       providerCallId: call.id || message.callId || payload.callId || `vapi-${Date.now()}`,

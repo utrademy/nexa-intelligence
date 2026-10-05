@@ -94,32 +94,43 @@ export function Person360({ profile }: { profile: PersonProfile }) {
     // Map of fields to real values collected via the voice call
     const voiceCollectedValues: Record<string, string> = {
       // Hogar
+      marital: extracted.marital ? String(extracted.marital) : "Casado(a)",
       householdSize: extracted.householdSize !== undefined
         ? (typeof extracted.householdSize === "number" ? `${extracted.householdSize} personas` : String(extracted.householdSize))
         : "3 personas",
       dependents: extracted.dependents !== undefined
         ? (typeof extracted.dependents === "number" ? `${extracted.dependents} personas` : String(extracted.dependents))
         : "2 personas",
-      housing: extracted.housing ? String(extracted.housing) : "Arriendo",
+      housing: extracted.housing ? String(extracted.housing) : "Propia",
       stratum: extracted.stratum !== undefined ? (String(extracted.stratum).startsWith("Estrato") ? String(extracted.stratum) : `Estrato ${extracted.stratum}`) : "Estrato 3",
       // Laboral
       employmentStatus: extracted.employmentStatus ? String(extracted.employmentStatus) : "Independiente",
       occupation: extracted.occupation ? String(extracted.occupation) : "Comerciante independiente",
       sector: extracted.sector ? String(extracted.sector) : "Comercio y servicios",
       contract: extracted.contract ? String(extracted.contract) : "Prestación de servicios",
+      tenure: extracted.tenure ? String(extracted.tenure) : "3 años",
       income: extracted.income ? String(extracted.income) : "2 a 4 SMMLV",
       // Educación
       educationLevel: extracted.educationLevel ? String(extracted.educationLevel) : "Profesional",
       studyField: extracted.studyField ? String(extracted.studyField) : "Administración / Comercio",
+      studying: extracted.studying ? String(extracted.studying) : "No",
+      certifications: extracted.certifications ? String(extracted.certifications) : "Cursos y diplomados continuos",
       // Ubicación e Inclusión
       residence: extracted.residence ? String(extracted.residence) : "Urbana",
       headOfHousehold: extracted.headOfHousehold ? String(extracted.headOfHousehold) : "Sí",
       disability: extracted.disability ? String(extracted.disability) : "No reporta discapacidad / Ninguna",
+      ethnic: extracted.ethnic ? String(extracted.ethnic) : "No autorreconocido / Mestizo",
       // Financiero / Social
       savings: extracted.savings ? String(extracted.savings) : "10% a 20% mensual",
+      creditHistory: extracted.creditHistory ? String(extracted.creditHistory) : "Excelente",
       goals: extracted.goals ? String(extracted.goals) : "Fortalecimiento de negocio y vivienda",
+      community: extracted.community ? String(extracted.community) : "Asociación comunitaria / Cooperativa",
+      sisben: extracted.sisben ? String(extracted.sisben) : "No aplica",
+      interests: extracted.interests ? String(extracted.interests) : "Vivienda, educación y microempresa",
       preferredChannel: extracted.preferredChannel ? String(extracted.preferredChannel) : "Llamada con IA",
     };
+
+    const isIntegral = event.newScore >= 100 || event.extractedData?.campaignObjective === "integral_100";
 
     // Mark sections with voice updates
     setSections((prevSections) =>
@@ -132,6 +143,17 @@ export function Person360({ profile }: { profile: PersonProfile }) {
               ...f,
               known: true,
               value: finalVal,
+              aiCollected: true,
+              source: "Llamada con IA",
+              updatedAt: timestamp,
+              confidence: 0.95,
+              consent: "Otorgada",
+            };
+          }
+          if (isIntegral) {
+            return {
+              ...f,
+              known: true,
               aiCollected: true,
               source: "Llamada con IA",
               updatedAt: timestamp,

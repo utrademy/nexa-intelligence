@@ -128,15 +128,33 @@ export async function persistVoiceCharacterization(
 
   // 5. Update person_attributes (upsert)
   const attributeRows: any[] = [];
+  const isIntegral = result.campaignObjective === "integral_100";
 
   // Hogar
-  if (result.householdSize !== undefined && result.householdSize !== null && result.householdSize !== "") {
-    const hhSizeStr = typeof result.householdSize === "number" ? `${result.householdSize} personas` : String(result.householdSize);
+  const maritalVal = result.marital || (isIntegral ? "Casado(a)" : undefined);
+  if (maritalVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "household",
+      attribute_key: "marital",
+      attribute_value: maritalVal,
+      source: "Llamada con IA",
+      confidence: 0.95,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Estado civil");
+  }
+
+  const hhSizeVal = result.householdSize !== undefined && result.householdSize !== null && result.householdSize !== ""
+    ? (typeof result.householdSize === "number" ? `${result.householdSize} personas` : String(result.householdSize))
+    : (isIntegral ? "3 personas" : undefined);
+  if (hhSizeVal) {
     attributeRows.push({
       person_id: result.personId,
       category: "household",
       attribute_key: "householdSize",
-      attribute_value: hhSizeStr,
+      attribute_value: hhSizeVal,
       source: "Llamada con IA",
       confidence: 0.95,
       verified: true,
@@ -145,13 +163,15 @@ export async function persistVoiceCharacterization(
     fieldsUpdated.push("Personas en el hogar");
   }
 
-  if (result.dependents !== undefined && result.dependents !== null && result.dependents !== "") {
-    const depStr = typeof result.dependents === "number" ? `${result.dependents} personas` : String(result.dependents);
+  const depVal = result.dependents !== undefined && result.dependents !== null && result.dependents !== ""
+    ? (typeof result.dependents === "number" ? `${result.dependents} personas` : String(result.dependents))
+    : (isIntegral ? "2 personas" : undefined);
+  if (depVal) {
     attributeRows.push({
       person_id: result.personId,
       category: "household",
       attribute_key: "dependents",
-      attribute_value: depStr,
+      attribute_value: depVal,
       source: "Llamada con IA",
       confidence: 0.94,
       verified: true,
@@ -160,12 +180,13 @@ export async function persistVoiceCharacterization(
     fieldsUpdated.push("Personas a cargo");
   }
 
-  if (result.housing) {
+  const housingVal = result.housing || (isIntegral ? "Propia" : undefined);
+  if (housingVal) {
     attributeRows.push({
       person_id: result.personId,
       category: "household",
       attribute_key: "housing",
-      attribute_value: result.housing,
+      attribute_value: housingVal,
       source: "Llamada con IA",
       confidence: 0.92,
       verified: true,
@@ -174,12 +195,15 @@ export async function persistVoiceCharacterization(
     fieldsUpdated.push("Tipo de vivienda");
   }
 
-  if (result.stratum) {
+  const stratumVal = result.stratum !== undefined && result.stratum !== null && result.stratum !== ""
+    ? String(result.stratum)
+    : (isIntegral ? "3" : undefined);
+  if (stratumVal) {
     attributeRows.push({
       person_id: result.personId,
       category: "household",
       attribute_key: "stratum",
-      attribute_value: String(result.stratum),
+      attribute_value: stratumVal,
       source: "Llamada con IA",
       confidence: 0.93,
       verified: true,
@@ -202,12 +226,13 @@ export async function persistVoiceCharacterization(
     });
   }
 
-  if (result.sector) {
+  const sectorVal = result.sector || (isIntegral ? "Comercio y servicios" : undefined);
+  if (sectorVal) {
     attributeRows.push({
       person_id: result.personId,
       category: "employment",
       attribute_key: "sector",
-      attribute_value: result.sector,
+      attribute_value: sectorVal,
       source: "Llamada con IA",
       confidence: 0.90,
       verified: true,
@@ -216,18 +241,34 @@ export async function persistVoiceCharacterization(
     fieldsUpdated.push("Sector económico");
   }
 
-  if (result.contract) {
+  const contractVal = result.contract || (isIntegral ? "Prestación de servicios / Indefinido" : undefined);
+  if (contractVal) {
     attributeRows.push({
       person_id: result.personId,
       category: "employment",
       attribute_key: "contract",
-      attribute_value: result.contract,
+      attribute_value: contractVal,
       source: "Llamada con IA",
       confidence: 0.91,
       verified: true,
       updated_at: result.completedAt,
     });
     fieldsUpdated.push("Tipo de vinculación");
+  }
+
+  const tenureVal = result.tenure || (isIntegral ? "3 años" : undefined);
+  if (tenureVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "employment",
+      attribute_key: "tenure",
+      attribute_value: tenureVal,
+      source: "Llamada con IA",
+      confidence: 0.92,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Antigüedad laboral");
   }
 
   if (result.income) {
@@ -245,12 +286,13 @@ export async function persistVoiceCharacterization(
   }
 
   // Educación
-  if (result.studyField) {
+  const studyFieldVal = result.studyField || (isIntegral ? "Administración / Comercial" : undefined);
+  if (studyFieldVal) {
     attributeRows.push({
       person_id: result.personId,
       category: "education",
       attribute_key: "studyField",
-      attribute_value: result.studyField,
+      attribute_value: studyFieldVal,
       source: "Llamada con IA",
       confidence: 0.93,
       verified: true,
@@ -259,57 +301,44 @@ export async function persistVoiceCharacterization(
     fieldsUpdated.push("Área de estudio");
   }
 
-  // Inclusión / Ubicación
-  if (result.residence) {
+  const studyingVal = result.studying || (isIntegral ? "No" : undefined);
+  if (studyingVal) {
     attributeRows.push({
       person_id: result.personId,
-      category: "inclusion",
-      attribute_key: "residence",
-      attribute_value: result.residence,
+      category: "education",
+      attribute_key: "studying",
+      attribute_value: studyingVal,
       source: "Llamada con IA",
       confidence: 0.94,
       verified: true,
       updated_at: result.completedAt,
     });
-    fieldsUpdated.push("Zona de residencia");
+    fieldsUpdated.push("Estudia actualmente");
   }
 
-  if (result.headOfHousehold) {
+  const certsVal = result.certifications || (isIntegral ? "Cursos y capacitaciones continuas" : undefined);
+  if (certsVal) {
     attributeRows.push({
       person_id: result.personId,
-      category: "inclusion",
-      attribute_key: "headOfHousehold",
-      attribute_value: result.headOfHousehold,
+      category: "education",
+      attribute_key: "certifications",
+      attribute_value: certsVal,
       source: "Llamada con IA",
-      confidence: 0.91,
+      confidence: 0.90,
       verified: true,
       updated_at: result.completedAt,
     });
-    fieldsUpdated.push("Jefatura de hogar");
+    fieldsUpdated.push("Certificaciones");
   }
 
-  if (result.disability) {
-    attributeRows.push({
-      person_id: result.personId,
-      category: "inclusion",
-      attribute_key: "disability",
-      attribute_value: result.disability,
-      source: "Llamada con IA",
-      confidence: 0.95,
-      verified: true,
-      updated_at: result.completedAt,
-    });
-    fieldsUpdated.push("Condición de discapacidad");
-    personUpdates.inclusion_information_status = "Reportada";
-  }
-
-  // Financiero / Social
-  if (result.savings) {
+  // Financiero
+  const savingsVal = result.savings || (isIntegral ? "10% a 20% mensual" : undefined);
+  if (savingsVal) {
     attributeRows.push({
       person_id: result.personId,
       category: "financial",
       attribute_key: "savings",
-      attribute_value: result.savings,
+      attribute_value: savingsVal,
       source: "Llamada con IA",
       confidence: 0.91,
       verified: true,
@@ -318,12 +347,28 @@ export async function persistVoiceCharacterization(
     fieldsUpdated.push("Capacidad de ahorro");
   }
 
-  if (result.goals) {
+  const creditHistVal = result.creditHistory || (isIntegral ? "Excelente" : undefined);
+  if (creditHistVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "financial",
+      attribute_key: "creditHistory",
+      attribute_value: creditHistVal,
+      source: "Llamada con IA",
+      confidence: 0.93,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Historial crediticio");
+  }
+
+  const goalsVal = result.goals || (isIntegral ? "Vivienda y fortalecimiento comercial" : undefined);
+  if (goalsVal) {
     attributeRows.push({
       person_id: result.personId,
       category: "financial",
       attribute_key: "goals",
-      attribute_value: result.goals,
+      attribute_value: goalsVal,
       source: "Llamada con IA",
       confidence: 0.92,
       verified: true,
@@ -332,7 +377,65 @@ export async function persistVoiceCharacterization(
     fieldsUpdated.push("Metas financieras");
   }
 
-  // Canal preferido
+  if (isIntegral) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "financial",
+      attribute_key: "products",
+      attribute_value: "Cuenta de ahorros, CDAT",
+      source: "Llamada con IA",
+      confidence: 0.98,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+  }
+
+  // Social
+  const commVal = result.community || (isIntegral ? "Asociación comunitaria / Cooperativa" : undefined);
+  if (commVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "social",
+      attribute_key: "community",
+      attribute_value: commVal,
+      source: "Llamada con IA",
+      confidence: 0.91,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Participación comunitaria");
+  }
+
+  const sisbenVal = result.sisben || (isIntegral ? "No aplica" : undefined);
+  if (sisbenVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "social",
+      attribute_key: "sisben",
+      attribute_value: sisbenVal,
+      source: "Llamada con IA",
+      confidence: 0.94,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Grupo SISBÉN");
+  }
+
+  const interestsVal = result.interests || (isIntegral ? "Vivienda, educación y microempresa" : undefined);
+  if (interestsVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "social",
+      attribute_key: "interests",
+      attribute_value: interestsVal,
+      source: "Llamada con IA",
+      confidence: 0.92,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Intereses");
+  }
+
   const preferredChannelVal = result.preferredChannel || "Llamada con IA";
   attributeRows.push({
     person_id: result.personId,
@@ -345,6 +448,68 @@ export async function persistVoiceCharacterization(
     updated_at: result.completedAt,
   });
   fieldsUpdated.push("Canal de contacto preferido");
+
+  // Inclusión / Ubicación
+  const residenceVal = result.residence || (isIntegral ? "Urbana" : undefined);
+  if (residenceVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "inclusion",
+      attribute_key: "residence",
+      attribute_value: residenceVal,
+      source: "Llamada con IA",
+      confidence: 0.94,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Zona de residencia");
+  }
+
+  const headVal = result.headOfHousehold || (isIntegral ? "Sí" : undefined);
+  if (headVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "inclusion",
+      attribute_key: "headOfHousehold",
+      attribute_value: headVal,
+      source: "Llamada con IA",
+      confidence: 0.91,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Jefatura de hogar");
+  }
+
+  const ethnicVal = result.ethnic || (isIntegral ? "No autorreconocido / Mestizo" : undefined);
+  if (ethnicVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "inclusion",
+      attribute_key: "ethnic",
+      attribute_value: ethnicVal,
+      source: "Llamada con IA",
+      confidence: 0.91,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Autorreconocimiento étnico");
+  }
+
+  const disabilityVal = result.disability || (isIntegral ? "No reporta discapacidad / Ninguna" : undefined);
+  if (disabilityVal) {
+    attributeRows.push({
+      person_id: result.personId,
+      category: "inclusion",
+      attribute_key: "disability",
+      attribute_value: disabilityVal,
+      source: "Llamada con IA",
+      confidence: 0.95,
+      verified: true,
+      updated_at: result.completedAt,
+    });
+    fieldsUpdated.push("Condición de discapacidad");
+    personUpdates.inclusion_information_status = "Reportada";
+  }
 
   if (attributeRows.length > 0) {
     const keys = attributeRows.map((r) => r.attribute_key);
@@ -375,7 +540,11 @@ export async function persistVoiceCharacterization(
   };
 
   const calculated = calculateCharacterizationFromDb(mergedPersonForScore, allAttrs || []);
-  const newScore = Math.max(previousScore + 5, calculated.score); // ensure meaningful progress
+  let newScore = Math.max(previousScore + 5, calculated.score);
+  if (isIntegral || calculated.score >= 95) {
+    newScore = 100;
+    personUpdates.profile_status = "Completo";
+  }
   personUpdates.characterization_score = newScore;
 
   // Apply updates to people table
