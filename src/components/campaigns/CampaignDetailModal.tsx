@@ -2,12 +2,16 @@
 
 import {
   AlertTriangle,
+  BarChart3,
+  Briefcase,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
   CircleUser,
   Clock,
+  GraduationCap,
   Loader2,
+  MapPin,
   Megaphone,
   Pause,
   PhoneCall,
@@ -89,6 +93,13 @@ export function CampaignDetailModal({
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const testPhoneInputRef = useRef<HTMLInputElement>(null);
 
+  const [demographics, setDemographics] = useState<{
+    cities: { name: string; count: number; percentage: number }[];
+    education: { name: string; count: number; percentage: number }[];
+    employment: { name: string; count: number; percentage: number }[];
+    scores: { name: string; count: number; percentage: number }[];
+  } | null>(null);
+
   // Load saved POC test phone from localStorage
   useEffect(() => {
     try {
@@ -147,7 +158,7 @@ export function CampaignDetailModal({
     };
   }, []);
 
-  // Fetch real campaign execution metrics
+  // Fetch real campaign execution metrics and demographics
   useEffect(() => {
     if (!open || !campaign) return;
     let isCancelled = false;
@@ -155,11 +166,23 @@ export function CampaignDetailModal({
     async function loadMetrics() {
       setIsLoadingMetrics(true);
       try {
-        const res = await fetch(`/api/campaigns/metrics?campaignId=${campaign?.id}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!isCancelled && data.metrics) {
-          setMetrics(data.metrics);
+        const [mRes, aRes] = await Promise.all([
+          fetch(`/api/campaigns/metrics?campaignId=${campaign?.id}`),
+          fetch(`/api/campaigns/analytics?campaignId=${campaign?.id}`),
+        ]);
+
+        if (mRes.ok) {
+          const mData = await mRes.json();
+          if (!isCancelled && mData.metrics) {
+            setMetrics(mData.metrics);
+          }
+        }
+
+        if (aRes.ok) {
+          const aData = await aRes.json();
+          if (!isCancelled && aData.analytics?.demographics) {
+            setDemographics(aData.analytics.demographics);
+          }
         }
       } catch (err) {
         console.error("Error loading campaign metrics:", err);
@@ -174,15 +197,15 @@ export function CampaignDetailModal({
     };
   }, [open, campaign]);
 
-  // Load candidate synthetic people for Safe Demo Mode
+  // Load candidate synthetic people for Safe Demo Mode tied to this specific campaign
   useEffect(() => {
-    if (!demoOpen) return;
+    if (!demoOpen || !campaign) return;
     let isCancelled = false;
 
     async function loadCandidates() {
       setIsLoadingCandidates(true);
       try {
-        const res = await fetch("/api/campaigns/preview?limit=8&incompletenessFilter=critical_gaps");
+        const res = await fetch(`/api/campaigns/preview?limit=8&campaignId=${campaign?.id}`);
         if (!res.ok) return;
         const data = await res.json();
         if (!isCancelled && Array.isArray(data.people)) {
@@ -202,7 +225,7 @@ export function CampaignDetailModal({
     return () => {
       isCancelled = true;
     };
-  }, [demoOpen, selectedPerson]);
+  }, [demoOpen, campaign, selectedPerson]);
 
   if (!campaign) return null;
 
@@ -473,6 +496,71 @@ export function CampaignDetailModal({
             </div>
           </div>
         </div>
+
+        {/* DEMOGRAPHIC PROFILE OF THE CAMPAIGN */}
+        {demographics && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4.5 shadow-xs">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2.5">
+              <div>
+                <h4 className="text-[14px] font-semibold text-slate-900">Perfil demográfico de la audiencia</h4>
+                <p className="text-[12px] text-slate-500">Composición y distribución de asociados asignados a esta campaña (Supabase)</p>
+              </div>
+              <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-[11.5px] font-medium text-indigo-700">
+                Datos reales en PostgreSQL
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* Top Cities */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-800 mb-2">
+                  <MapPin className="h-4 w-4 text-indigo-600" />
+                  <span>Distribución territorial</span>
+                </div>
+                <div className="space-y-1.5">
+                  {demographics.cities.slice(0, 4).map((c) => (
+                    <div key={c.name} className="flex items-center justify-between text-[11.5px]">
+                      <span className="truncate text-slate-600">{c.name}</span>
+                      <span className="font-semibold text-slate-900 tabular-nums">{c.percentage}% ({c.count})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Characterization Scores */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-800 mb-2">
+                  <BarChart3 className="h-4 w-4 text-cyan-600" />
+                  <span>Puntajes de caracterización</span>
+                </div>
+                <div className="space-y-1.5">
+                  {demographics.scores.map((s) => (
+                    <div key={s.name} className="flex items-center justify-between text-[11.5px]">
+                      <span className="truncate text-slate-600">{s.name}</span>
+                      <span className="font-semibold text-slate-900 tabular-nums">{s.percentage}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Employment */}
+              <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+                <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-800 mb-2">
+                  <Briefcase className="h-4 w-4 text-emerald-600" />
+                  <span>Situación laboral</span>
+                </div>
+                <div className="space-y-1.5">
+                  {demographics.employment.slice(0, 4).map((e) => (
+                    <div key={e.name} className="flex items-center justify-between text-[11.5px]">
+                      <span className="truncate text-slate-600">{e.name}</span>
+                      <span className="font-semibold text-slate-900 tabular-nums">{e.percentage}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* DEMO LAUNCH PROMPT BANNER */}
         <div className="flex items-center justify-between rounded-xl border border-violet-200 bg-linear-to-r from-violet-50 to-indigo-50/70 p-4">

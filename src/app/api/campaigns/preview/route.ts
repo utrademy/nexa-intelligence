@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getRealSegmentPreview } from "@/lib/campaigns/campaign-service";
+import { getCampaignCandidates, getRealSegmentPreview } from "@/lib/campaigns/campaign-service";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const campaignId = searchParams.get("campaignId");
     const incompletenessFilter = searchParams.get("incompletenessFilter") as any;
     const city = searchParams.get("city") || undefined;
     const employmentStatus = searchParams.get("employmentStatus") || undefined;
@@ -11,16 +12,21 @@ export async function GET(request: Request) {
     const missingField = searchParams.get("missingField") || undefined;
     const limit = Number(searchParams.get("limit")) || 10;
 
-    const people = await getRealSegmentPreview(
-      {
-        incompletenessFilter,
-        city,
-        employmentStatus,
-        educationLevel,
-        missingField,
-      },
-      limit,
-    );
+    let people = [];
+    if (campaignId) {
+      people = await getCampaignCandidates(campaignId, limit);
+    } else {
+      people = await getRealSegmentPreview(
+        {
+          incompletenessFilter,
+          city,
+          employmentStatus,
+          educationLevel,
+          missingField,
+        },
+        limit,
+      );
+    }
 
     return NextResponse.json({ people });
   } catch (err: any) {

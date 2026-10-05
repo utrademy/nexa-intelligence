@@ -113,11 +113,8 @@ export async function getPersonProfile(id: string) {
   return person ? buildProfile(person) : null;
 }
 
-export async function getCampaignData() {
-  const [dbCampaigns, feedInteractions] = await Promise.all([
-    fetchCampaignsFromDb(),
-    getCampaignFeedInteractions(50),
-  ]);
+export async function getCampaignData(selectedCampaignId?: string) {
+  const dbCampaigns = await fetchCampaignsFromDb();
 
   let campaignList: typeof campaigns.CAMPAIGNS = campaigns.CAMPAIGNS;
 
@@ -132,24 +129,24 @@ export async function getCampaignData() {
       responded: camp.responded_count,
       completed: camp.completed_count,
       channels: ["voice", "whatsapp", "form"] as Channel[],
-      startDate: camp.created_at.slice(0, 10),
+      startDate: camp.created_at ? camp.created_at.slice(0, 10) : "2026-10-01",
       endDate: "2026-12-31",
       owner: "Laura Mantilla",
     }));
   }
 
-  // The primary organizational campaign is the main active population campaign
+  // The primary active campaign: selectedCampaignId, or default to main active campaign
   const primaryCampaign =
+    (selectedCampaignId && campaignList.find((c) => c.id === selectedCampaignId)) ||
     campaignList.find((c) => c.id === "c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22") ||
     campaignList.find((c) => (c.contacted || 0) > 0) ||
     campaignList[0] ||
     campaigns.FEATURED_CAMPAIGN;
 
-  const mergedInteractions = feedInteractions.length > 0 ? feedInteractions : campaigns.CAMPAIGN_INTERACTIONS;
-
   // Real campaign analytics and presets computed dynamically from live database
-  const [campaignAnalytics, sizeAll, sizeCritical, sizeLt70, sizeLt85] = await Promise.all([
+  const [campaignAnalytics, feedInteractions, sizeAll, sizeCritical, sizeLt70, sizeLt85] = await Promise.all([
     getRealCampaignAnalytics(primaryCampaign.id),
+    getCampaignFeedInteractions(50, primaryCampaign.id),
     getRealSegmentCount({ incompletenessFilter: "all_incomplete" }),
     getRealSegmentCount({ incompletenessFilter: "critical_gaps" }),
     getRealSegmentCount({ incompletenessFilter: "score_lt_70" }),
@@ -183,7 +180,8 @@ export async function getCampaignData() {
     channels: campaignAnalytics.channels,
     outcomes: campaignAnalytics.outcomes,
     responseRate: campaignAnalytics.responseRate,
-    interactions: mergedInteractions,
+    demographics: campaignAnalytics.demographics,
+    interactions: feedInteractions.length > 0 ? feedInteractions : campaigns.CAMPAIGN_INTERACTIONS,
     audiencePresets,
     collectableFields: campaigns.COLLECTABLE_FIELDS,
   };

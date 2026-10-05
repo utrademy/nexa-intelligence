@@ -133,6 +133,50 @@ export async function getRealSegmentPreview(
 }
 
 /**
+ * Fetches real candidate associates directly linked to a campaign from Supabase
+ */
+export async function getCampaignCandidates(
+  campaignId: string,
+  limit = 10,
+): Promise<MatchingPersonPreview[]> {
+  const supabase = getSupabaseServerClient();
+
+  const { data: targets, error } = await supabase
+    .from("campaign_targets")
+    .select(`
+      person_id,
+      people (
+        id, first_name, last_name, document_type, document_number, city, employment_status, education_level, characterization_score, profile_status
+      )
+    `)
+    .eq("campaign_id", campaignId)
+    .limit(limit);
+
+  if (!error && targets && targets.length > 0) {
+    const people = targets
+      .map((t: any) => t.people)
+      .filter(Boolean)
+      .map((p: any) => ({
+        id: p.id,
+        fullName: `${p.first_name} ${p.last_name || ""}`.trim(),
+        documentNumber: `${p.document_type || "CC"} ${p.document_number || ""}`.trim(),
+        city: p.city || "Sin información",
+        employmentStatus: p.employment_status || "Sin información",
+        educationLevel: p.education_level || "Sin información",
+        characterizationScore: p.characterization_score || 0,
+        profileStatus: p.profile_status || "Parcial",
+      }));
+
+    if (people.length > 0) {
+      return people;
+    }
+  }
+
+  // Fallback to segment preview if no targets are linked yet
+  return getRealSegmentPreview({ incompletenessFilter: "critical_gaps" }, limit);
+}
+
+/**
  * Creates a real campaign in Supabase with targeted audience
  */
 export async function createRealCampaign(params: {
@@ -239,13 +283,19 @@ export async function getCampaignExecutionMetrics(campaignId: string) {
 /**
  * Fetches real interactions for campaigns view with joined people names and details
  */
-export async function getCampaignFeedInteractions(limit = 40) {
+export async function getCampaignFeedInteractions(limit = 40, campaignId?: string) {
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("interactions")
     .select("id, person_id, campaign_id, channel, status, summary, structured_data, created_at, people(id, first_name, last_name, city)")
     .order("created_at", { ascending: false })
     .limit(limit);
+
+  if (campaignId) {
+    query = query.eq("campaign_id", campaignId);
+  }
+
+  const { data, error } = await query;
 
   if (error || !data) {
     return [];
