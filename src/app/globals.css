@@ -139,11 +139,25 @@ body {
   animation: var(--animate-shimmer);
 }
 
-.animate-marquee {
-  animation: marquee 26s linear infinite;
+@keyframes nexaMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
-.animate-marquee:hover {
-  animation-play-state: paused;
+.nexa-marquee-track {
+  display: flex !important;
+  width: max-content !important;
+  will-change: transform;
+  animation: nexaMarquee 24s linear infinite !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nexa-marquee-track:hover {
+    animation-play-state: paused;
+  }
 }
 

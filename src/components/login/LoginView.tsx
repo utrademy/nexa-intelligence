@@ -106,10 +106,7 @@ export function LoginView() {
               </div>
             </label>
             <label className="block">
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-medium text-slate-700">Contraseña</span>
-                <span className="text-[12px] font-medium text-indigo-600">¿Olvidó su contraseña?</span>
-              </div>
+              <span className="text-[13px] font-medium text-slate-700">Contraseña</span>
               <div className="relative mt-1.5">
                 <Lock className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
@@ -118,11 +115,14 @@ export function LoginView() {
                   className="h-11 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-10 text-[14px] text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none"
                 />
               </div>
-            </label>
-
-            <label className="flex items-center gap-2 pt-1 text-[13px] text-slate-600">
-              <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-slate-300 accent-indigo-600" />
-              Mantener la sesión iniciada
+              <div className="mt-1.5 flex justify-end">
+                <button
+                  type="button"
+                  className="text-[12px] font-medium text-indigo-600 hover:text-indigo-700 transition"
+                >
+                  ¿Olvidó su contraseña?
+                </button>
+              </div>
             </label>
 
             <button
@@ -142,6 +142,11 @@ export function LoginView() {
                 </>
               )}
             </button>
+
+            <label className="flex items-center justify-center gap-2 pt-1 text-[13px] text-slate-600">
+              <input type="checkbox" defaultChecked className="h-4 w-4 rounded border-slate-300 accent-indigo-600" />
+              Mantener la sesión iniciada
+            </label>
           </form>
 
           <div className="mt-6 flex items-center gap-3 text-[12px] text-slate-400">

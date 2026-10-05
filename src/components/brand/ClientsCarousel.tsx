@@ -114,9 +114,9 @@ export function ClientsCarousel({
 
           <div
             ref={scrollContainerRef}
-            className="flex items-center gap-4 overflow-x-auto py-2 no-scrollbar scrollbar-none"
+            className="flex items-center overflow-x-auto py-2 no-scrollbar scrollbar-none"
           >
-            <div className="flex animate-marquee shrink-0 items-center gap-4">
+            <div className="nexa-marquee-track items-center gap-4">
               {displayItems.map((client, idx) => (
                 <div
                   key={`${client.id}-${idx}`}
@@ -128,7 +128,7 @@ export function ClientsCarousel({
                       alt={client.name}
                       width={140}
                       height={48}
-                      className="max-h-11 w-auto max-w-[130px] object-contain grayscale opacity-60 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105"
+                      className="max-h-11 w-auto max-w-[130px] object-contain grayscale contrast-125 opacity-75 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105"
                     />
                   </div>
                   <span className="mt-1 text-[11px] font-medium text-slate-500 transition-colors group-hover:text-slate-800">
@@ -165,7 +165,7 @@ export function ClientsCarousel({
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 sm:w-28 bg-gradient-to-r from-slate-50/90 sm:from-slate-50 via-slate-50/70 to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 sm:w-28 bg-gradient-to-l from-slate-50/90 sm:from-slate-50 via-slate-50/70 to-transparent" />
 
-        <div className="flex animate-marquee shrink-0 items-center gap-4 py-2">
+        <div className="nexa-marquee-track items-center gap-4 py-2">
           {displayItems.map((client, idx) => (
             <div
               key={`${client.id}-${idx}`}
@@ -177,10 +177,10 @@ export function ClientsCarousel({
                   alt={client.name}
                   width={130}
                   height={44}
-                  className="max-h-10 w-auto max-w-[125px] object-contain grayscale opacity-60 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105"
+                  className="max-h-10 w-auto max-w-[125px] object-contain grayscale contrast-125 opacity-75 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105"
                 />
               </div>
-              <span className="mt-0.5 text-[10.5px] font-medium tracking-tight text-slate-400 transition-colors group-hover:text-slate-700">
+              <span className="mt-0.5 text-[10.5px] font-medium tracking-tight text-slate-500 transition-colors group-hover:text-slate-800">
                 {client.shortName}
               </span>
             </div>
