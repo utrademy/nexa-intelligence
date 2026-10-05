@@ -73,7 +73,7 @@ export function LoginView() {
         </div>
       </div>
 
-      <div className="flex flex-1 items-center justify-center px-6 py-12">
+      <div className="flex flex-1 items-center justify-center bg-slate-50/70 px-6 py-12">
         <div className="w-full max-w-[400px] animate-slide-up">
           <div className="mb-10 lg:hidden">
             <Logo tone="dark" endorsed showIntelligence={false} />
@@ -166,29 +166,12 @@ export function LoginView() {
           <div className="mt-5">
             <IntroVideo variant="login-card" />
           </div>
-
-          <div className="mt-8 flex justify-center border-t border-slate-100 pt-6 lg:hidden">
-            <PartnerMark tone="dark" label="Inteligencia laboral con el respaldo de" className="items-center" />
-          </div>
-
-          <div className="mt-8 flex items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2 text-center text-[12px] text-slate-500 lg:mt-10">
-            <span className="flex h-5 w-7 shrink-0 items-center justify-center overflow-hidden rounded bg-white p-0.5 shadow-2xs">
-              <Image
-                src="/brand/comultrasan-logo.png"
-                alt="Financiera Comultrasan"
-                width={28}
-                height={14}
-                className="h-full w-full object-contain"
-              />
-            </span>
-            <span>Entorno de demostración · <strong className="font-semibold text-slate-700">Financiera Comultrasan</strong></span>
-          </div>
         </div>
       </div>
     </div>
 
-    {/* SECCIÓN FINAL: CARRUSEL DE POTENCIALES CLIENTES */}
-    <section className="relative shrink-0 border-t border-slate-200/70 bg-slate-50/70 py-6 px-4 sm:px-8">
+    {/* SECCIÓN FINAL: CARRUSEL DE POTENCIALES CLIENTES TODO EN FONDO BLANCO */}
+    <section className="relative shrink-0 border-t border-slate-200/60 bg-white py-6 px-4 sm:px-8">
       <ClientsCarousel variant="login" />
     </section>
   </div>

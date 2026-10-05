@@ -160,16 +160,16 @@ export function ClientsCarousel({
       </div>
 
       {/* CONTINUOUS MARQUEE CAROUSEL IN SUBTLE GRAYSCALE */}
-      <div className="relative mt-4 overflow-hidden">
-        {/* Soft Fade Edges */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 sm:w-28 bg-gradient-to-r from-slate-50/90 sm:from-slate-50 via-slate-50/70 to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 sm:w-28 bg-gradient-to-l from-slate-50/90 sm:from-slate-50 via-slate-50/70 to-transparent" />
+      <div className="relative mt-4 overflow-hidden bg-white">
+        {/* Soft Fade Edges in Pure White */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 sm:w-28 bg-gradient-to-r from-white via-white/80 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 sm:w-28 bg-gradient-to-l from-white via-white/80 to-transparent" />
 
-        <div className="nexa-marquee-track items-center gap-4 py-2">
+        <div className="nexa-marquee-track items-center gap-5 py-2">
           {displayItems.map((client, idx) => (
             <div
               key={`${client.id}-${idx}`}
-              className="group relative flex h-20 w-44 sm:w-48 shrink-0 flex-col items-center justify-center rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-300 hover:border-indigo-300 hover:shadow-md hover:-translate-y-0.5"
+              className="group relative flex h-20 w-44 sm:w-48 shrink-0 flex-col items-center justify-center rounded-xl bg-white px-4 py-2.5 transition-all duration-300 hover:-translate-y-0.5"
             >
               <div className="relative flex h-11 w-full items-center justify-center">
                 <Image
@@ -177,10 +177,10 @@ export function ClientsCarousel({
                   alt={client.name}
                   width={130}
                   height={44}
-                  className="max-h-10 w-auto max-w-[125px] object-contain grayscale contrast-125 opacity-75 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105"
+                  className="max-h-11 w-auto max-w-[130px] object-contain grayscale contrast-125 opacity-80 transition-all duration-300 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-105"
                 />
               </div>
-              <span className="mt-0.5 text-[10.5px] font-medium tracking-tight text-slate-500 transition-colors group-hover:text-slate-800">
+              <span className="mt-0.5 text-[10.5px] font-medium tracking-tight text-slate-400 transition-colors group-hover:text-slate-800">
                 {client.shortName}
               </span>
             </div>
