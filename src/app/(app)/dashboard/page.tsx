@@ -32,6 +32,7 @@ import { ProgressBar } from "@/components/ui/Progress";
 import { getDashboardData } from "@/lib/data";
 import { formatCompact, formatNumber } from "@/lib/format";
 import { IntroVideo } from "@/components/dashboard/IntroVideo";
+import { GuidedTourButton } from "@/components/dashboard/GuidedTour";
 
 export const metadata: Metadata = { title: "Resumen Ejecutivo" };
 
@@ -94,7 +95,10 @@ export default async function DashboardPage() {
                     </>
                   }
                 />
-                <IntroVideo variant="dashboard-hero" />
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <GuidedTourButton />
+                  <IntroVideo variant="dashboard-hero" />
+                </div>
               </div>
               <p className="mt-2 text-[12px] text-slate-400">
                 Sergio Flórez Abogados aporta el marco analítico, normativo y jurisprudencial para la comprensión del entorno laboral y pensional.
