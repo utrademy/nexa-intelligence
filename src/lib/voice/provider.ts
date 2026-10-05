@@ -217,9 +217,13 @@ ${knownText}
 CAMPOS PENDIENTES POR COMPLETAR (ENFOCA TUS PREGUNTAS EN ESTOS DATOS FALTANTES):
 ${missingText}
 
-TU PERSONALIDAD, VOZ Y ACENTO PAISA:
-- Eres una mujer antioqueña (Medellín, Colombia), sumamente cálida, respetuosa, amable, dulce y profesional.
-- Tu acento es paisa de Medellín: musicalidad natural, acogedora y respetuosa ("con muchísimo gusto", "con el mayor de los gustos", "un minutico", "claro que sí", "no se preocupe", "que esté muy bien", "tranquilo/tranquila").
+TU PERSONALIDAD, VOZ Y ACENTO COLOMBIANO AUTÉNTICO:
+- Eres María Camila, una asesora colombiana (Medellín/Antioquia), sumamente cálida, respetuosa, dulce, amable y profesional.
+- Tu acento es 100% colombiano de Colombia: melodioso, sonriente y acogedor (musicalidad paisa suave y educada, con dicción impecable).
+- Utilizas de forma natural giros y expresiones de cortesía colombianas:
+  "Con muchísimo gusto", "Con el mayor de los gustos", "Un minutico de su valioso tiempo", "Claro que sí, con mucho gusto", "No se preocupe", "Tranquilo señor / Tranquila señora", "Que esté muy bien", "Muchísimas gracias a usted".
+- Te diriges al asociado siempre de "usted", con absoluto respeto, cercanía y calidez humana.
+- Tu ritmo es relajado y sonriente; modulas las oraciones con cadencia natural colombiana, sin sonar jamás como una grabación robótica ni extranjera.
 
 DINAMISMO Y VELOCIDAD DE RESPUESTA INMEDIATA (CRÍTICO):
 - Responde de forma INMEDIATA y ágil apenas el usuario hable. NUNCA te quedes en silencio ni hagas pausas largas antes de contestar.
@@ -378,6 +382,7 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
           assistant: {
             firstMessage: `Hola, muy buenos días. Le habla María Camila de Financiera Comultrasan, en alianza con Sergio Flórez y abogados. ¿Cómo se encuentra hoy? ¿Tiene usted un minutico disponible para una breve actualización de sus datos?`,
             backgroundSound: "office",
+            backgroundDenoisingEnabled: false,
             silenceTimeoutSeconds: 90,
             maxDurationSeconds: 600,
             responseDelaySeconds: 0.1,
@@ -482,11 +487,11 @@ export class VapiVoiceAdapter implements VoiceProviderAdapter {
             voice: {
               provider: "11labs",
               voiceId: VOICE_CONFIG.voiceId, // Jessica / Colombian female voice
-              model: "eleven_turbo_v2_5", // Low-latency multilingual model
-              stability: 0.5,
-              similarityBoost: 0.8,
-              style: 0.15,
-              speed: 0.98, // Natural conversational tempo
+              model: "eleven_multilingual_v2", // Native multilingual model for rich, authentic Spanish pronunciation & cadence
+              stability: 0.44, // Lower stability enables authentic melodious accent variation and warmth
+              similarityBoost: 0.85,
+              style: 0.35, // Expressive human warmth and authentic conversational inflection
+              speed: 0.92, // Calm, warm Colombian conversational tempo
               useSpeakerBoost: true,
             },
             endCallPhrases: [
